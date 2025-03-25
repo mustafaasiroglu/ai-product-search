@@ -1,0 +1,5 @@
+
+flask
+psycopg
+psycopg2
+azure-identity

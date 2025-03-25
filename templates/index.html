@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Product Search</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+
+        body {
+            margin-top: 10px;
+            font-family: 'Segoe UI Semibold', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+        }
+
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+            
+        }
+
+        .card{
+            height: 330px;
+        }
+        .card-body{
+            transition: all 0.5s ease;
+        }
+        .card-img-top:hover {
+            height: 330px;
+            transition: all 0.5s ease;
+            filter: brightness(0.9);
+            cursor: pointer;
+            transform: scale(1.1);
+        }
+        .card-img-top:hover ~ .card-body {
+            display: none;
+        }
+        .card-img-top:hover ~ .card-body {
+            display: none;
+        }
+
+        /* .card-img-top:hover {
+            z-index: 1000;
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            object-fit: contain;
+            transition: all 0.5s ease;
+        } */
+        .card-text {
+            font-size: smaller;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-title {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            height: 2.6rem;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .filters {
+            border-right: 1px solid #ddd;
+            padding-right: 20px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        .search-bar {
+            width: 50%;
+            display: flex;
+        }
+        .icons {
+            display: flex;
+            align-items: center;
+        }
+        .icons img {
+            margin-left: 20px;
+            cursor: pointer;
+        }
+        .categories {
+            margin: 20px 0px;
+            padding: 20px 0;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .categories a {
+            margin-left: 10px;
+            margin-right: 25px;
+            text-decoration: none;
+            color: #454545;
+
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="static/images/logo.png" alt="Logo" height="30">
+
+            <div class="search-bar">
+
+                <form id="inputform" method="POST" style="width: 100%;">
+                    <input type="text" id="sea" name="search_query" class="form-control" placeholder="Let's find the products you searched for..." style="padding:20px;padding-left: 45px;">
+                </form>
+                <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="25" height="40" viewBox="0 0 50 50" style="position: absolute;margin: 0px 10px;">
+                    <path fill="gray" d="M 21 3 C 11.601563 3 4 10.601563 4 20 C 4 29.398438 11.601563 37 21 37 C 24.355469 37 27.460938 36.015625 30.09375 34.34375 L 42.375 46.625 L 46.625 42.375 L 34.5 30.28125 C 36.679688 27.421875 38 23.878906 38 20 C 38 10.601563 30.398438 3 21 3 Z M 21 7 C 28.199219 7 34 12.800781 34 20 C 34 27.199219 28.199219 33 21 33 C 13.800781 33 8 27.199219 8 20 C 8 12.800781 13.800781 7 21 7 Z"></path>
+                </svg>
+            </div>
+            
+            <div class="icons">
+                <img src="static/images/right.png" alt="Profile" height="40">
+            </div>
+        </header>
+        <div class="categories">
+            <a href="#">WOMEN</a>
+            <a href="#">MEN</a>
+            <a href="#">KIDS</a>
+            <a href="#" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: bold;">SHOES & SLIPPERS</a>
+            <a href="#">BAGS</a>
+            <a href="#">COSMETICS</a>
+            <a href="#">GIFTS</a>
+            <a href="#" style="color:rgb(226, 23, 23)">CAMPAIGNS</a>
+            <!-- Add more categories as needed -->
+        </div>
+    </div>
+    <div class="container mt-5">
+        <form method="POST" class="form-inline mb-4">
+            <span class="mr-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13.5 16C13.9142 16 14.25 16.3358 14.25 16.75C14.25 17.1642 13.9142 17.5 13.5 17.5H10.5C10.0858 17.5 9.75 17.1642 9.75 16.75C9.75 16.3358 10.0858 16 10.5 16H13.5ZM16.5 11C16.9142 11 17.25 11.3358 17.25 11.75C17.25 12.1642 16.9142 12.5 16.5 12.5H7.5C7.08579 12.5 6.75 12.1642 6.75 11.75C6.75 11.3358 7.08579 11 7.5 11H16.5ZM19.5 6C19.9142 6 20.25 6.33579 20.25 6.75C20.25 7.16421 19.9142 7.5 19.5 7.5H4.5C4.08579 7.5 3.75 7.16421 3.75 6.75C3.75 6.33579 4.08579 6 4.5 6H19.5Z" fill="#212121" />
+              </svg></span>
+            <!-- <input id="sea" type="text" value="" name="search_query" class="form-control mr-3" style="width: 50%;max-width: 400px;" placeholder="Search query..."> -->
+            <select id="cat" name="category" class="form-control mr-2" style="font-size: small;">
+                <option value="">All Sub Categories</option>
+                <option value="Koşu Ayakkabısı">Koşu Ayakkabısı</option>
+                <option value="Lifestyle Ayakkabı">Lifestyle Ayakkabı</option>
+                <option value="Loafer">Loafer</option>
+                <option value="Outdoor Ayakkabısı">Outdoor Ayakkabısı</option>
+                <option value="Plaj Terliği">Plaj Terliği</option>
+                <option value="Sandalet">Sandalet</option>
+                <option value="Stiletto">Stiletto</option>
+                <option value="Terlik">Terlik</option>
+                <option value="Topuklu Ayakkabı">Topuklu Ayakkabı</option>
+                <option value="Topuklu Sandalet">Topuklu Sandalet</option>
+                <option value="Topuklu Terlik">Topuklu Terlik</option>
+                <option value="Topuklu Çizme">Topuklu Çizme</option>
+                <option value="Tote Çanta">Tote Çanta</option>
+                <option value="Training Ayakkabısı">Training Ayakkabısı</option>
+                <option value="Voleybol Ayakkabısı">Voleybol Ayakkabısı</option>
+                <!-- Add more categories as needed -->
+            </select>
+            <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">
+                <option value="vector">Vector</option>
+                <option value="keyword">Keyword</option>
+            </select>
+            <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
+                <option value=20 >20 results</option>
+                <option value=50 >50 results</option>
+                <option value=100 >100 results</option>
+            </select>
+            <!-- <input type="text" name="price_range" class="form-control mr-2" placeholder="Price range (e.g., 100-500)"> -->
+            <!-- <button type="submit" class="btn btn-primary">Search</button> -->
+        </form>
+
+        <p>Showing {{ products|length }} results for "{{ q }}"</p>
+
+        <div class="row">
+            {% for product in products %}
+                <div class="col-md-3">
+                    <div class="card mb-3 shadow-sm" style="overflow: hidden;">
+                        <img src="https://statics.boyner.com.tr/mnresize/505/704/productimages/{{ product[3] }}" class="card-img-top" >
+                        <div class="card-body">
+                            <span class="card-text"><small class="text-muted">Score: {{ product[5] }}</small></span>
+                            <h6 class="card-title">{{ product[1] }}</h6>
+                            <span class="card-icon" title="Product description: {{ product[2]}}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M18.25 3C19.7688 3 21 4.23122 21 5.75V18.25C21 19.7688 19.7688 21 18.25 21H5.75C4.23122 21 3 19.7688 3 18.25V5.75C3 4.23122 4.23122 3 5.75 3H18.25ZM18.25 4.5H5.75C5.05964 4.5 4.5 5.05964 4.5 5.75V18.25C4.5 18.9404 5.05964 19.5 5.75 19.5H18.25C18.9404 19.5 19.5 18.9404 19.5 18.25V5.75C19.5 5.05964 18.9404 4.5 18.25 4.5ZM14.25 11.5H6.75L6.64823 11.5068C6.28215 11.5565 6 11.8703 6 12.25C6 12.6642 6.33579 13 6.75 13H14.25L14.3518 12.9932C14.7178 12.9435 15 12.6297 15 12.25C15 11.8358 14.6642 11.5 14.25 11.5ZM6.75 15.5H17.25C17.6642 15.5 18 15.8358 18 16.25C18 16.6297 17.7178 16.9435 17.3518 16.9932L17.25 17H6.75C6.33579 17 6 16.6642 6 16.25C6 15.8703 6.28215 15.5565 6.64823 15.5068L6.75 15.5ZM17.25 7.5H6.75L6.64823 7.50685C6.28215 7.55651 6 7.8703 6 8.25C6 8.66421 6.33579 9 6.75 9H17.25L17.3518 8.99315C17.7178 8.94349 18 8.6297 18 8.25C18 7.83579 17.6642 7.5 17.25 7.5Z" fill="#212121" />
+                                </svg>
+                            </span>
+                            {% if product[4] != None %}
+                            <span class="card-icon" title="Image description: {{ product[4]}}">
+                                <svg height="16" width="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M10.181 9.684L7.988 11.877H7.281L3.814 8.41L1.934 10.291C1.79816 9.93257 1.69442 9.56278 1.624 9.186L3.461 7.35H4.168L7.634 10.816L9.827 8.623H10.534L13.455 11.545C13.2703 11.8272 13.064 12.0947 12.838 12.345L10.181 9.684Z" fill="#006CBE" />
+                                    <path opacity="0.1" d="M14.5 8C14.5 9.28558 14.1188 10.5423 13.4046 11.6112C12.6903 12.6801 11.6752 13.5132 10.4874 14.0052C9.29972 14.4972 7.99279 14.6259 6.73191 14.3751C5.47104 14.1243 4.31285 13.5052 3.40381 12.5962C2.49476 11.6872 1.8757 10.529 1.62489 9.26809C1.37409 8.00721 1.50281 6.70028 1.99478 5.51256C2.48675 4.32484 3.31987 3.30968 4.38879 2.59545C5.45771 1.88122 6.71442 1.5 8 1.5C9.72391 1.5 11.3772 2.18482 12.5962 3.40381C13.8152 4.62279 14.5 6.27609 14.5 8V8Z" fill="#1F1F1F" />
+                                    <path d="M11 5.5C11 5.79667 10.912 6.08668 10.7472 6.33336C10.5824 6.58003 10.3481 6.77229 10.074 6.88582C9.79993 6.99935 9.49833 7.02906 9.20736 6.97118C8.91639 6.9133 8.64912 6.77044 8.43934 6.56066C8.22956 6.35088 8.0867 6.08361 8.02882 5.79264C7.97094 5.50166 8.00065 5.20006 8.11418 4.92597C8.22771 4.65189 8.41997 4.41762 8.66664 4.2528C8.91332 4.08797 9.20333 4 9.5 4C9.89782 4 10.2794 4.15804 10.5607 4.43934C10.842 4.72064 11 5.10218 11 5.5Z" fill="#B27D00" />
+                                    <path d="M8 1C6.61553 1 5.26215 1.41054 4.11101 2.17971C2.95986 2.94888 2.06266 4.04213 1.53284 5.32122C1.00303 6.6003 0.864406 8.00777 1.1345 9.36563C1.4046 10.7235 2.07128 11.9708 3.05025 12.9497C4.02922 13.9287 5.2765 14.5954 6.63437 14.8655C7.99223 15.1356 9.3997 14.997 10.6788 14.4672C11.9579 13.9373 13.0511 13.0401 13.8203 11.889C14.5895 10.7378 15 9.38447 15 8C15 6.14348 14.2625 4.36301 12.9497 3.05025C11.637 1.7375 9.85651 1 8 1V1ZM8 14C6.81331 14 5.65327 13.6481 4.66658 12.9888C3.67988 12.3295 2.91085 11.3925 2.45672 10.2961C2.0026 9.19974 1.88378 7.99334 2.11529 6.82946C2.3468 5.66557 2.91824 4.59647 3.75736 3.75736C4.59647 2.91824 5.66557 2.3468 6.82946 2.11529C7.99334 1.88378 9.19974 2.0026 10.2961 2.45672C11.3925 2.91085 12.3295 3.67988 12.9888 4.66658C13.6481 5.65327 14 6.81331 14 8C14 9.5913 13.3679 11.1174 12.2426 12.2426C11.1174 13.3679 9.5913 14 8 14Z" fill="#1F1F1F" />
+                                </svg>
+                            </span>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</br></br>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#cat').val('{{ c }}');
+            $('#sea').val('{{ q }}');
+            $('#typ').val('{{ t }}');
+            $('#res').val('{{ i }}');
+        });
+
+        //onchange of selects
+
+        function makesearch() {
+            var cat = $('#cat').val();
+            var typ = $('#typ').val();
+            var res = $('#res').val()||20;
+            var sea = $('#sea').val()||'';
+            window.location.href = '/?c=' + cat + '&t=' + typ + '&q=' + sea+'&i='+res;
+        };
+
+        $('#cat, #typ, #res').change(function() {
+            $('#inputform').submit();
+        });
+
+        $('#inputform').submit(function() {
+            makesearch();
+            return false;
+        });
+
+        //onsubmit of form
+
+
+
+
+    </script>
+</body>
+</html>

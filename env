@@ -1,0 +1,6 @@
+$env:DBHOST = "postgre-semantic-search.postgres.database.azure.com"
+$env:DBNAME = "postgres"
+$env:DBUSER = "mustafa"
+$env:DBPASSWORD = "P@ssw0rd"
+$env:SSLMODE = "require"
+$env:AZURE_OPENAI_API_KEY = "db31170c18054166a6c3124bea7e558f"
