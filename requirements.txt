@@ -3,3 +3,5 @@ flask
 psycopg
 psycopg2
 azure-identity
+azure-search-documents
+azure-core
