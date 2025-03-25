@@ -1,168 +1,112 @@
 from flask import Flask, request, render_template, redirect, url_for
 import psycopg2
-from get_conn import get_connection_uri
+import os
+from azure.search.documents.models import VectorFilterMode
+from azure.search.documents import SearchClient
+from azure.identity import DefaultAzureCredential
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents.models import VectorizableTextQuery
+from azure.search.documents.models import QueryType
+from openai import AzureOpenAI
+import time
+
 
 app = Flask(__name__)
 
-def product_search(search_query, num_results, category=None, price_range=None):
-    conn_string = get_connection_uri()
-    conn = psycopg2.connect(conn_string)
-    cursor = conn.cursor()
+def rewrite_search_query(search_query):
+    client = AzureOpenAI(
+        azure_deployment=os.environ['azure_openai_deployment'],
+        api_version=os.environ['azure_openai_api_version'],
+        azure_endpoint=os.environ['azure_openai_endpoint'],
+        api_key=os.environ['azure_openai_key'],
+    )
+    prompt = f"Rewrite the following query as simple product search query. Output should include few words, no verbs, no full sentence. keep original language same. Query: {search_query}"
+    response = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model=os.environ['azure_openai_model'],
+        max_tokens=50,
+        temperature=0.5,
+    )
+    rewritten_query = response.choices[0].message.content.strip()
+    return rewritten_query
 
-    # Define the SQL function as a string
-    sql_function = '''
-    drop function if exists product_search(text, text, int);
-    create function
-        product_search(searchQuery text, category text, numResults int)
-    returns table(
-                product_id text,
-                name text,
-                description text,
-                image_url text,
-                image_description text,
-                score real)
-    as $$
-    declare
-        query_embedding vector(1536);
-    begin
-        query_embedding := (azure_openai.create_embeddings('text-embedding-ada-002', searchQuery));
-        return query
-        select
-            p.product_id::text,
-            p.name::text,
-            p.description::text,
-            p.image_url::text,
-            p.image_description::text,
-            (p.embedding <=> query_embedding)::real as score
-        from
-            products p
-        where
-            p.embedding is not null
-        and
-            (category = '' or p.categories ? category)
-       
-        order by score asc limit numResults; -- cosine distance
-    end $$
-    language plpgsql;
-    '''
+def product_search_vector(search_query, num_results=50, category=None, price_range=None):
 
-    # Execute the SQL function
-    cursor.execute(sql_function)
-    conn.commit()
+    search_endpoint = os.environ['search_endpoint']
+    search_key = os.environ['search_key']
+    search_index = os.environ['search_index']
 
-    edited_query = "*" if search_query == "" else search_query
-    # Call the function with parameters
-    cursor.callproc('product_search', (edited_query,category, num_results))
-    results = cursor.fetchall()
+    search_client = SearchClient(endpoint=search_endpoint,
+                                 index_name=search_index,
+                                 credential=AzureKeyCredential(search_key))
+    
+    vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+    
+    results = search_client.search(search_text=None,
+                                   vector_queries= [vector_query],
+                                   top=num_results, 
+                                   vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                                   select=["product_id","name","description","image_url","image_description"],
+                                   filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                   )
 
-    # Close the connection
-    cursor.close()
-    conn.close()
-    sorted_results = sorted(results, key=lambda x: x[5])
-    return sorted_results
+    results_list = [result for result in results][:num_results]
+    
+    return results_list
 
-def product_search_keyword(search_query, num_results, category=None, price_range=None):
-    conn_string = get_connection_uri()
-    conn = psycopg2.connect(conn_string)
-    cursor = conn.cursor()
+def product_search_keyword(search_query, num_results=50, category=None, price_range=None):
 
-    # Define the SQL function as a string
-    sql_function = '''
-    drop function if exists product_search_keyword(text, text, int);
-    create function
-        product_search_keyword(searchQuery text, category text, numResults int)
-    returns table(
-                product_id text,
-                name text,
-                description text,
-                image_url text,
-                image_description text,
-                score real
-                )
-    as $$
-    begin
-        return query
-        select
-            p.product_id::text,
-            p.name::text,
-            p.description::text,
-            p.image_url::text,
-            p.image_description::text,
-            0.00000::real as score
-        from
-            products p
-        where
-            (category = '' or p.categories ? category)
-        and
-            (searchQuery = '' or p.name ilike '%' || searchQuery || '%' or p.description ilike '%' || searchQuery || '%' or p.image_description ilike '%' || searchQuery || '%' )
-        order by score asc limit numResults; -- cosine distance
-    end $$
-    language plpgsql;
-    '''
+    search_endpoint = os.environ['search_endpoint']
+    search_key = os.environ.get("search_key")
+    search_index = os.environ.get("search_index")
 
-    # Execute the SQL function
-    cursor.execute(sql_function)
-    conn.commit()
+    search_client = SearchClient(endpoint=search_endpoint,
+                                 index_name=search_index,
+                                 credential=AzureKeyCredential(search_key))
+    
+    results = search_client.search(search_query,
+                                   top=num_results, 
+                                   select=["product_id","name","description","image_url","image_description"],
+                                   filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                   )
 
-    edited_query = "" if search_query == "" else search_query
-    # Call the function with parameters
-    cursor.callproc('product_search_keyword', (edited_query,category, num_results))
-    results = cursor.fetchall()
-
-    # Close the connection
-    cursor.close()
-    conn.close()
-    return results
+    results_list = [result for result in results][:num_results]
+    
+    return results_list
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+
+    starttime = time.time()
 
     if request.method == 'POST':
         search_query = request.form.get('search_query')
         category = request.form.get('category', '')
         searchtype = request.form.get('searchtype', 'vector')
-        items = request.form.get('items', 20)
+        items = int(request.form.get('items', 20))
         return redirect(url_for('index', q=search_query, c=category, t=searchtype))
     else:
         search_query = request.args.get('q', '')
         category = request.args.get('c', '')
         searchtype = request.args.get('t', 'vector')
-        items = request.args.get('i', 20)
+        items = int(request.args.get('i', 20))
 
     products = []
+    rewritten_query = ''
 
     if searchtype == 'vector':
-        products = product_search(search_query, items, category)
+        products = product_search_vector(search_query, items, category)
+    elif searchtype == 'rewrite':
+        rewritten_query = rewrite_search_query(search_query)
+        products = product_search_vector(rewritten_query, items, category)
     else:
         products = product_search_keyword(search_query, items, category)
 
-    return render_template('index.html', products=products, q=search_query, c=category, t=searchtype, i=items)
+    timeelapsed = time.time() - starttime
+    print(f"Time elapsed: {timeelapsed} seconds")
 
-@app.route('/api/search', methods=['GET'])
-def api_search(q='', c='', t='vector', i=20):
-    search_query = request.args.get('q', q)
-    category = request.args.get('c', c)
-    searchtype = request.args.get('t', t)
-    items = request.args.get('items', i)
-    products = []
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, t=searchtype, i=items, timeelapsed=timeelapsed)
 
-    if searchtype == 'vector':
-        products = product_search(search_query, items, category)
-    else:
-        products = product_search_keyword(search_query, items, category)
-    
-    for i in range(len(products)):
-        description = ' '.join(products[i][2].split()).strip()
-        products[i] = {
-            'product_id': products[i][0],
-            'product_title': products[i][1],
-            'description': description,
-            'image_url': "https://statics.boyner.com.tr/mnresize/505/704/productimages/"+products[i][3],
-            'image_description': products[i][4],
-            'score': products[i][5]
-        }
-
-    return {'results': products}
 
 if __name__ == '__main__':
     app.run(debug=True)
