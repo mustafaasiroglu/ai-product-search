@@ -160,6 +160,13 @@
                 <option value="Voleybol Ayakkabısı">Voleybol Ayakkabısı</option>
                 <!-- Add more categories as needed -->
             </select>
+
+            <select id="gen" name="gender" class="form-control mr-2" style="font-size: small;">
+                <option value="all">All Genders</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+            </select>
+            
             <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">
                 
                 <option value="keyword">Keyword</option>
@@ -183,7 +190,7 @@
                     <div class="card mb-3 shadow-sm" style="overflow: hidden;">
                         <img src="{{ product.image_url }}" class="card-img-top" >
                         <div class="card-body">
-                            <span class="card-text"><small class="text-muted">Score: {{ product['@score'] }}</small></span>
+                            <span class="card-text"><small class="text-muted">Score: {{ product['@search.score'] }}</small></span>
                             <h6 class="card-title">{{ product.name }}</h6>
                             <span class="card-icon" title="Product description: {{ product.description}}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -216,6 +223,7 @@
     <script>
         $(document).ready(function() {
             $('#cat').val('{{ c }}');
+            $('#gen').val('{{ g }}');
             $('#sea').val('{{ q }}');
             $('#typ').val('{{ t }}');
             $('#res').val('{{ i }}');
@@ -225,13 +233,14 @@
 
         function makesearch() {
             var cat = $('#cat').val();
+            var gen = $('#gen').val();
             var typ = $('#typ').val();
             var res = $('#res').val()||20;
             var sea = $('#sea').val()||'';
-            window.location.href = '/?c=' + cat + '&t=' + typ + '&q=' + sea+'&i='+res;
+            window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' +gen + '&q=' + sea+'&i='+res;
         };
 
-        $('#cat, #typ, #res').change(function() {
+        $('#cat, #typ, #res, #gen').change(function() {
             $('#inputform').submit();
         });
 

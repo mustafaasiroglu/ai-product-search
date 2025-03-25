@@ -30,7 +30,7 @@ def rewrite_search_query(search_query):
     rewritten_query = response.choices[0].message.content.strip()
     return rewritten_query
 
-def product_search_vector(search_query, num_results=50, category=None, price_range=None):
+def product_search_vector(search_query, num_results=50, category=None, price_range=None, gender=None):
 
     search_endpoint = os.environ['search_endpoint']
     search_key = os.environ['search_key']
@@ -54,7 +54,7 @@ def product_search_vector(search_query, num_results=50, category=None, price_ran
     
     return results_list
 
-def product_search_keyword(search_query, num_results=50, category=None, price_range=None):
+def product_search_keyword(search_query, num_results=50, category=None, price_range=None, gender=None):
 
     search_endpoint = os.environ['search_endpoint']
     search_key = os.environ.get("search_key")
@@ -82,30 +82,32 @@ def index():
     if request.method == 'POST':
         search_query = request.form.get('search_query')
         category = request.form.get('category', '')
-        searchtype = request.form.get('searchtype', 'vector')
+        gender = request.form.get('gender', 'all')
+        searchtype = request.form.get('searchtype', 'keyword')
         items = int(request.form.get('items', 20))
         return redirect(url_for('index', q=search_query, c=category, t=searchtype))
     else:
         search_query = request.args.get('q', '')
         category = request.args.get('c', '')
-        searchtype = request.args.get('t', 'vector')
+        gender = request.args.get('g', 'all')
+        searchtype = request.args.get('t', 'keyword')
         items = int(request.args.get('i', 20))
 
     products = []
     rewritten_query = ''
 
-    if searchtype == 'vector':
-        products = product_search_vector(search_query, items, category)
+    if search_query == '' or searchtype == 'keyword':
+        products = product_search_keyword(search_query, items, category, gender=gender)
+    elif searchtype == 'vector':
+        products = product_search_vector(search_query, items, category, gender=gender)
     elif searchtype == 'rewrite':
         rewritten_query = rewrite_search_query(search_query)
-        products = product_search_vector(rewritten_query, items, category)
-    else:
-        products = product_search_keyword(search_query, items, category)
+        products = product_search_vector(rewritten_query, items, category, gender=gender)
 
     timeelapsed = time.time() - starttime
     print(f"Time elapsed: {timeelapsed} seconds")
 
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, t=searchtype, i=items, timeelapsed=timeelapsed)
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, g=gender, t=searchtype, i=items, timeelapsed=timeelapsed)
 
 
 if __name__ == '__main__':
