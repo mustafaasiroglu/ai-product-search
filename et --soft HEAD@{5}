@@ -1,9 +1,0 @@
-[33m9559897[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: rebase (finish): returning to refs/heads/main
-[33m9559897[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: rebase (continue): aaa
-[33m13ee7c6[m HEAD@{2}: pull --tags -r origin main (start): checkout 13ee7c6c07ee4dc8698e7eff98effd044d77bc88
-[33m44e42da[m HEAD@{3}: checkout: moving from main to main
-[33m44e42da[m HEAD@{4}: commit: aaa
-[33ma6b7ebf[m HEAD@{5}: commit: fix
-[33m640bc23[m HEAD@{6}: commit: commit
-[33m56b9646[m HEAD@{7}: commit: a
-[33m5633a20[m HEAD@{8}: commit (initial): init
