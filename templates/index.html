@@ -142,7 +142,7 @@
             <!-- <input id="sea" type="text" value="" name="search_query" class="form-control mr-3" style="width: 50%;max-width: 400px;" placeholder="Search query..."> -->
             <select id="cat" name="category" class="form-control mr-2" style="font-size: small;">
                 <option value="">All Sub Categories</option>
-                <option value="Koşu Ayakkabısı">Koşu Ayakkabısı</option>
+                <option value="Kazak">Kazak</option>
                 <option value="Lifestyle Ayakkabı">Lifestyle Ayakkabı</option>
                 <option value="Loafer">Loafer</option>
                 <option value="Outdoor Ayakkabısı">Outdoor Ayakkabısı</option>
@@ -161,9 +161,9 @@
             </select>
 
             <select id="gen" name="gender" class="form-control mr-2" style="font-size: small;">
-                <option value="all">All Genders</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
+                <option value="">All Genders</option>
+                <option value="Kadın">Kadın</option>
+                <option value="Erkek">Erkek</option>
             </select>
             
             <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">
@@ -195,7 +195,7 @@
             {% for product in products %}
                 <div class="col-md-3">
                     <div class="card mb-3 shadow-sm" style="overflow: hidden;">
-                        <img src="{{ product.image_url }}" class="card-img-top" >
+                        <img src="{{ product.imageUrl }}" class="card-img-top" >
                         <div class="card-body">
                             <span class="card-text"><small class="text-muted">Score: {{ product['@search.score'] }}</small></span>
                             <h6 class="card-title">{{ product.name }}</h6>

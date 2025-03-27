@@ -54,7 +54,7 @@ def product_search_vector(search_query, num_results=50, category=None, price_ran
                                    vector_queries= [vector_query],
                                    top=num_results, 
                                    vector_filter_mode=VectorFilterMode.PRE_FILTER,
-                                   select=["product_id","name","description","image_url","image_description"],
+                                   select=["productId","name","description","imageUrl","description"],
                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
                                    )
 
@@ -74,7 +74,7 @@ def product_search_keyword(search_query, num_results=50, category=None, price_ra
     
     results = search_client.search(search_query,
                                    top=num_results, 
-                                   select=["product_id","name","description","image_url","image_description"],
+                                   select=["productId","name","description","imageUrl","description"],
                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
                                    )
 
@@ -90,7 +90,7 @@ def index():
     if request.method == 'POST':
         search_query = request.form.get('search_query')
         category = request.form.get('category', '')
-        gender = request.form.get('gender', 'all')
+        gender = request.form.get('gender', None)
         sortby = request.form.get('sortby', 'default')
         searchtype = request.form.get('searchtype', 'keyword')
         items = int(request.form.get('items', 20))
@@ -98,7 +98,7 @@ def index():
     else:
         search_query = request.args.get('q', '')
         category = request.args.get('c', '')
-        gender = request.args.get('g', 'all')
+        gender = request.args.get('g', None)
         sortby = request.args.get('s', 'default')
         searchtype = request.args.get('t', 'keyword')
         items = int(request.args.get('i', 20))
@@ -106,20 +106,20 @@ def index():
     results = []
     rewritten_query = ''
 
-    if search_query == '' or searchtype == 'keyword':
+    if searchtype == 'keyword':
         results = search_client.search(search_query,
                                    top=items, 
-                                   select=["product_id","name","description","image_url","image_description"],
+                                   select=["productId","name","description","imageUrl","description"],
                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
                                    )
         
     elif searchtype == 'vector':
         vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
-        results = search_client.search(search_text=None,
+        results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
                                     vector_filter_mode=VectorFilterMode.PRE_FILTER,
-                                    select=["product_id","name","description","image_url","image_description"],
+                                    select=["productId","name","description","imageUrl","description"],
                                     filter= f"categories/any(s: s eq '{category}')" if category else None,
                                     )
         
@@ -127,25 +127,38 @@ def index():
     elif searchtype == 'rewrite':
         rewritten_query = rewrite_search_query(search_query)
         vector_query = VectorizableTextQuery(text=rewritten_query, k_nearest_neighbors=50, fields="text_vector")
-        results = search_client.search(search_text=None,
+        results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
                                     vector_filter_mode=VectorFilterMode.PRE_FILTER,
-                                    select=["product_id","name","description","image_url","image_description"],
+                                    select=["productId","name","description","imageUrl","description"],
                                     filter= f"categories/any(s: s eq '{category}')" if category else None,
                                     )
         
     elif searchtype == 'custom1':
         vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
-        results = search_client.search(search_text=None,
+        results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
                                     vector_filter_mode=VectorFilterMode.PRE_FILTER,
-                                    select=["product_id","name","description","image_url","image_description"],
-                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                    select=["productId","name","description","imageUrl","description"],
+                                    filter= f"genderName eq 'Kadın'" if gender else None,
                                     # scoring_profile="custom1",
                                     )
     
+    elif searchtype == 'custom2':
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        if gender is "":
+            results = search_client.search(search_text=search_query,
+                                   top=items, 
+                                   select=["productId","name","description","imageUrl","description"],
+                                   )
+        else:
+                results = search_client.search(search_text=search_query,
+                                   top=items, 
+                                   select=["productId","name","description","imageUrl","description"],
+                                   filter= f"genderName eq '{gender}'",
+                                   )
     
     products = [result for result in results]
 
