@@ -123,7 +123,7 @@
                 <img src="static/images/right.png" alt="Profile" height="40">
             </div>
         </header>
-        <div class="categories">
+        <!-- <div class="categories">
             <a href="#">WOMEN</a>
             <a href="#">MEN</a>
             <a href="#">KIDS</a>
@@ -132,8 +132,7 @@
             <a href="#">COSMETICS</a>
             <a href="#">GIFTS</a>
             <a href="#" style="color:rgb(226, 23, 23)">CAMPAIGNS</a>
-            <!-- Add more categories as needed -->
-        </div>
+        </div> -->
     </div>
     <div class="container mt-5">
         <form method="POST" class="form-inline mb-4">
@@ -172,11 +171,19 @@
                 <option value="keyword">Keyword</option>
                 <option value="vector">Vector</option>
                 <option value="rewrite">Rewrite + Vector</option>
+                <option value="custom1">Custom 1</option>
+                <option value="custom2">Custom 2</option>
+                <option value="custom3">Custom 3</option>
             </select>
             <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
                 <option value=20 >20 results</option>
                 <option value=50 >50 results</option>
                 <option value=100 >100 results</option>
+            </select>
+            <select id="sor" name="sortby" class="form-control mr-2"  style="font-size: small;">
+                <option value="default" >Sort by Score</option>
+                <option value="price" >Sort by Price</option>
+                <option value="name" >Sort by Name</option>
             </select>
             <!-- <input type="text" name="price_range" class="form-control mr-2" placeholder="Price range (e.g., 100-500)"> -->
             <!-- <button type="submit" class="btn btn-primary">Search</button> -->
@@ -227,6 +234,7 @@
             $('#sea').val('{{ q }}');
             $('#typ').val('{{ t }}');
             $('#res').val('{{ i }}');
+            $('#sor').val('{{ s }}');
         });
 
         //onchange of selects
@@ -235,9 +243,10 @@
             var cat = $('#cat').val();
             var gen = $('#gen').val();
             var typ = $('#typ').val();
+            var sor = $('#sor').val();
             var res = $('#res').val()||20;
             var sea = $('#sea').val()||'';
-            window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' +gen + '&q=' + sea+'&i='+res;
+            window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' +gen + '&q=' + sea+'&i='+res +'&s='+sor;
         };
 
         $('#cat, #typ, #res, #gen').change(function() {

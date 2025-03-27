@@ -13,6 +13,14 @@ import time
 
 app = Flask(__name__)
 
+search_endpoint = os.environ['search_endpoint']
+search_key = os.environ['search_key']
+search_index = os.environ['search_index']
+search_client = SearchClient(endpoint=search_endpoint,
+                                 index_name=search_index,
+                                 credential=AzureKeyCredential(search_key))
+
+
 def rewrite_search_query(search_query):
     client = AzureOpenAI(
         azure_deployment=os.environ['azure_openai_deployment'],
@@ -83,6 +91,7 @@ def index():
         search_query = request.form.get('search_query')
         category = request.form.get('category', '')
         gender = request.form.get('gender', 'all')
+        sortby = request.form.get('sortby', 'default')
         searchtype = request.form.get('searchtype', 'keyword')
         items = int(request.form.get('items', 20))
         return redirect(url_for('index', q=search_query, c=category, t=searchtype))
@@ -90,24 +99,59 @@ def index():
         search_query = request.args.get('q', '')
         category = request.args.get('c', '')
         gender = request.args.get('g', 'all')
+        sortby = request.args.get('s', 'default')
         searchtype = request.args.get('t', 'keyword')
         items = int(request.args.get('i', 20))
 
-    products = []
+    results = []
     rewritten_query = ''
 
     if search_query == '' or searchtype == 'keyword':
-        products = product_search_keyword(search_query, items, category, gender=gender)
+        results = search_client.search(search_query,
+                                   top=items, 
+                                   select=["product_id","name","description","image_url","image_description"],
+                                   filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                   )
+        
     elif searchtype == 'vector':
-        products = product_search_vector(search_query, items, category, gender=gender)
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        results = search_client.search(search_text=None,
+                                    vector_queries= [vector_query],
+                                    top=items, 
+                                    vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                                    select=["product_id","name","description","image_url","image_description"],
+                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                    )
+        
+
     elif searchtype == 'rewrite':
         rewritten_query = rewrite_search_query(search_query)
-        products = product_search_vector(rewritten_query, items, category, gender=gender)
+        vector_query = VectorizableTextQuery(text=rewritten_query, k_nearest_neighbors=50, fields="text_vector")
+        results = search_client.search(search_text=None,
+                                    vector_queries= [vector_query],
+                                    top=items, 
+                                    vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                                    select=["product_id","name","description","image_url","image_description"],
+                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                    )
+        
+    elif searchtype == 'custom1':
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        results = search_client.search(search_text=None,
+                                    vector_queries= [vector_query],
+                                    top=items, 
+                                    vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                                    select=["product_id","name","description","image_url","image_description"],
+                                    filter= f"categories/any(s: s eq '{category}')" if category else None,
+                                    # scoring_profile="custom1",
+                                    )
+    
+    
+    products = [result for result in results]
 
     timeelapsed = time.time() - starttime
-    print(f"Time elapsed: {timeelapsed} seconds")
 
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, g=gender, t=searchtype, i=items, timeelapsed=timeelapsed)
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, g=gender, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed)
 
 
 if __name__ == '__main__':
