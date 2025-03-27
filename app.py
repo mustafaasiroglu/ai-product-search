@@ -48,7 +48,7 @@ def product_search_vector(search_query, num_results=50, category=None, price_ran
                                  index_name=search_index,
                                  credential=AzureKeyCredential(search_key))
     
-    vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+    vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="descriptionEmbedding,nameEmbedding,tagEmbedding")
     
     results = search_client.search(search_text=None,
                                    vector_queries= [vector_query],
@@ -114,7 +114,7 @@ def index():
                                    )
         
     elif searchtype == 'vector':
-        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="descriptionEmbedding,nameEmbedding,tagEmbedding")
         results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
@@ -126,7 +126,7 @@ def index():
 
     elif searchtype == 'rewrite':
         rewritten_query = rewrite_search_query(search_query)
-        vector_query = VectorizableTextQuery(text=rewritten_query, k_nearest_neighbors=50, fields="text_vector")
+        vector_query = VectorizableTextQuery(text=rewritten_query, k_nearest_neighbors=50, fields="descriptionEmbedding,nameEmbedding,tagEmbedding")
         results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
@@ -136,7 +136,7 @@ def index():
                                     )
         
     elif searchtype == 'custom1':
-        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="descriptionEmbedding,nameEmbedding,tagEmbedding")
         results = search_client.search(search_text=search_query,
                                     vector_queries= [vector_query],
                                     top=items, 
@@ -147,7 +147,7 @@ def index():
                                     )
     
     elif searchtype == 'custom2':
-        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="text_vector")
+        vector_query = VectorizableTextQuery(text=search_query, k_nearest_neighbors=50, fields="descriptionEmbedding,nameEmbedding,tagEmbedding")
         if gender is "":
             results = search_client.search(search_text=search_query,
                                    top=items, 
