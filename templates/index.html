@@ -101,6 +101,9 @@
             color: #454545;
 
         }
+        #facetPanel {
+            display: block !important;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -135,94 +138,111 @@
         </div> -->
     </div>
     <div class="container mt-5">
-        <form method="POST" class="form-inline mb-4">
-            <span class="mr-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13.5 16C13.9142 16 14.25 16.3358 14.25 16.75C14.25 17.1642 13.9142 17.5 13.5 17.5H10.5C10.0858 17.5 9.75 17.1642 9.75 16.75C9.75 16.3358 10.0858 16 10.5 16H13.5ZM16.5 11C16.9142 11 17.25 11.3358 17.25 11.75C17.25 12.1642 16.9142 12.5 16.5 12.5H7.5C7.08579 12.5 6.75 12.1642 6.75 11.75C6.75 11.3358 7.08579 11 7.5 11H16.5ZM19.5 6C19.9142 6 20.25 6.33579 20.25 6.75C20.25 7.16421 19.9142 7.5 19.5 7.5H4.5C4.08579 7.5 3.75 7.16421 3.75 6.75C3.75 6.33579 4.08579 6 4.5 6H19.5Z" fill="#212121" />
-              </svg></span>
-            <!-- <input id="sea" type="text" value="" name="search_query" class="form-control mr-3" style="width: 50%;max-width: 400px;" placeholder="Search query..."> -->
-            <select id="cat" name="category" class="form-control mr-2" style="font-size: small;">
-                <option value="">All Sub Categories</option>
-                <option value="Kazak">Kazak</option>
-                <option value="Lifestyle Ayakkabı">Lifestyle Ayakkabı</option>
-                <option value="Loafer">Loafer</option>
-                <option value="Outdoor Ayakkabısı">Outdoor Ayakkabısı</option>
-                <option value="Plaj Terliği">Plaj Terliği</option>
-                <option value="Sandalet">Sandalet</option>
-                <option value="Stiletto">Stiletto</option>
-                <option value="Terlik">Terlik</option>
-                <option value="Topuklu Ayakkabı">Topuklu Ayakkabı</option>
-                <option value="Topuklu Sandalet">Topuklu Sandalet</option>
-                <option value="Topuklu Terlik">Topuklu Terlik</option>
-                <option value="Topuklu Çizme">Topuklu Çizme</option>
-                <option value="Tote Çanta">Tote Çanta</option>
-                <option value="Training Ayakkabısı">Training Ayakkabısı</option>
-                <option value="Voleybol Ayakkabısı">Voleybol Ayakkabısı</option>
-                <!-- Add more categories as needed -->
-            </select>
-
-            <select id="gen" name="gender" class="form-control mr-2" style="font-size: small;">
-                <option value="">All Genders</option>
-                <option value="Kadın">Kadın</option>
-                <option value="Erkek">Erkek</option>
-            </select>
-            
-            <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">
-                
-                <option value="keyword">Keyword</option>
-                <option value="vector">Vector</option>
-                <option value="rewrite">Rewrite + Vector</option>
-                <option value="custom1">Custom 1</option>
-                <option value="custom2">Custom 2</option>
-                <option value="custom3">Custom 3</option>
-            </select>
-            <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
-                <option value=20 >20 results</option>
-                <option value=50 >50 results</option>
-                <option value=100 >100 results</option>
-            </select>
-            <select id="sor" name="sortby" class="form-control mr-2"  style="font-size: small;">
-                <option value="default" >Sort by Score</option>
-                <option value="price" >Sort by Price</option>
-                <option value="name" >Sort by Name</option>
-            </select>
-            <!-- <input type="text" name="price_range" class="form-control mr-2" placeholder="Price range (e.g., 100-500)"> -->
-            <!-- <button type="submit" class="btn btn-primary">Search</button> -->
-        </form>
-
-        <p>Showing {{ products|length }} results for "{% if q2 != '' %}{{q2}}{% else %}{{q}}{% endif %}" <span style="font-style: italic;color: rgb(255, 113, 113);">Time elapsed: {{ (timeelapsed*1000)|round|int}} ms</span></p>
-
         <div class="row">
-            {% for product in products %}
-                <div class="col-md-3">
-                    <div class="card mb-3 shadow-sm" style="overflow: hidden;">
-                        <img src="{{ product.imageUrl }}" class="card-img-top" >
-                        <div class="card-body">
-                            <span class="card-text"><small class="text-muted">Score: {{ product['@search.score'] }}</small></span>
-                            <h6 class="card-title">{{ product.name }}</h6>
-                            <span class="card-icon" title="Product description: {{ product.description}}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M18.25 3C19.7688 3 21 4.23122 21 5.75V18.25C21 19.7688 19.7688 21 18.25 21H5.75C4.23122 21 3 19.7688 3 18.25V5.75C3 4.23122 4.23122 3 5.75 3H18.25ZM18.25 4.5H5.75C5.05964 4.5 4.5 5.05964 4.5 5.75V18.25C4.5 18.9404 5.05964 19.5 5.75 19.5H18.25C18.9404 19.5 19.5 18.9404 19.5 18.25V5.75C19.5 5.05964 18.9404 4.5 18.25 4.5ZM14.25 11.5H6.75L6.64823 11.5068C6.28215 11.5565 6 11.8703 6 12.25C6 12.6642 6.33579 13 6.75 13H14.25L14.3518 12.9932C14.7178 12.9435 15 12.6297 15 12.25C15 11.8358 14.6642 11.5 14.25 11.5ZM6.75 15.5H17.25C17.6642 15.5 18 15.8358 18 16.25C18 16.6297 17.7178 16.9435 17.3518 16.9932L17.25 17H6.75C6.33579 17 6 16.6642 6 16.25C6 15.8703 6.28215 15.5565 6.64823 15.5068L6.75 15.5ZM17.25 7.5H6.75L6.64823 7.50685C6.28215 7.55651 6 7.8703 6 8.25C6 8.66421 6.33579 9 6.75 9H17.25L17.3518 8.99315C17.7178 8.94349 18 8.6297 18 8.25C18 7.83579 17.6642 7.5 17.25 7.5Z" fill="#212121" />
-                                </svg>
-                            </span>
-                            {% if product[4] != None %}
-                            <span class="card-icon" title="Image description: {{ product.image_description}}">
-                                <svg height="16" width="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M10.181 9.684L7.988 11.877H7.281L3.814 8.41L1.934 10.291C1.79816 9.93257 1.69442 9.56278 1.624 9.186L3.461 7.35H4.168L7.634 10.816L9.827 8.623H10.534L13.455 11.545C13.2703 11.8272 13.064 12.0947 12.838 12.345L10.181 9.684Z" fill="#006CBE" />
-                                    <path opacity="0.1" d="M14.5 8C14.5 9.28558 14.1188 10.5423 13.4046 11.6112C12.6903 12.6801 11.6752 13.5132 10.4874 14.0052C9.29972 14.4972 7.99279 14.6259 6.73191 14.3751C5.47104 14.1243 4.31285 13.5052 3.40381 12.5962C2.49476 11.6872 1.8757 10.529 1.62489 9.26809C1.37409 8.00721 1.50281 6.70028 1.99478 5.51256C2.48675 4.32484 3.31987 3.30968 4.38879 2.59545C5.45771 1.88122 6.71442 1.5 8 1.5C9.72391 1.5 11.3772 2.18482 12.5962 3.40381C13.8152 4.62279 14.5 6.27609 14.5 8V8Z" fill="#1F1F1F" />
-                                    <path d="M11 5.5C11 5.79667 10.912 6.08668 10.7472 6.33336C10.5824 6.58003 10.3481 6.77229 10.074 6.88582C9.79993 6.99935 9.49833 7.02906 9.20736 6.97118C8.91639 6.9133 8.64912 6.77044 8.43934 6.56066C8.22956 6.35088 8.0867 6.08361 8.02882 5.79264C7.97094 5.50166 8.00065 5.20006 8.11418 4.92597C8.22771 4.65189 8.41997 4.41762 8.66664 4.2528C8.91332 4.08797 9.20333 4 9.5 4C9.89782 4 10.2794 4.15804 10.5607 4.43934C10.842 4.72064 11 5.10218 11 5.5Z" fill="#B27D00" />
-                                    <path d="M8 1C6.61553 1 5.26215 1.41054 4.11101 2.17971C2.95986 2.94888 2.06266 4.04213 1.53284 5.32122C1.00303 6.6003 0.864406 8.00777 1.1345 9.36563C1.4046 10.7235 2.07128 11.9708 3.05025 12.9497C4.02922 13.9287 5.2765 14.5954 6.63437 14.8655C7.99223 15.1356 9.3997 14.997 10.6788 14.4672C11.9579 13.9373 13.0511 13.0401 13.8203 11.889C14.5895 10.7378 15 9.38447 15 8C15 6.14348 14.2625 4.36301 12.9497 3.05025C11.637 1.7375 9.85651 1 8 1V1ZM8 14C6.81331 14 5.65327 13.6481 4.66658 12.9888C3.67988 12.3295 2.91085 11.3925 2.45672 10.2961C2.0026 9.19974 1.88378 7.99334 2.11529 6.82946C2.3468 5.66557 2.91824 4.59647 3.75736 3.75736C4.59647 2.91824 5.66557 2.3468 6.82946 2.11529C7.99334 1.88378 9.19974 2.0026 10.2961 2.45672C11.3925 2.91085 12.3295 3.67988 12.9888 4.66658C13.6481 5.65327 14 6.81331 14 8C14 9.5913 13.3679 11.1174 12.2426 12.2426C11.1174 13.3679 9.5913 14 8 14Z" fill="#1F1F1F" />
-                                </svg>
-                            </span>
-                            {% endif %}
+            <!-- Sidebar -->
+            <div id="facetPanel" class="col-sm-3 col-md-3 sidebar show">
+                <div id="clearFilters"></div>
+                <ul class="nav nav-sidebar">
+                    <div id="facetContainer">  
+                        <!-- Facet groups will be appended here -->  
+                    </div>  
+                    
+                    
+                </ul>
+            </div>
 
+            <!-- Main Content -->
+            <div class="col-sm-9 col-md-9">
+                <form method="POST" class="form-inline mb-4">
+                    <span class="mr-2">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13.5 16C13.9142 16 14.25 16.3358 14.25 16.75C14.25 17.1642 13.9142 17.5 13.5 17.5H10.5C10.0858 17.5 9.75 17.1642 9.75 16.75C9.75 16.3358 10.0858 16 10.5 16H13.5ZM16.5 11C16.9142 11 17.25 11.3358 17.25 11.75C17.25 12.1642 16.9142 12.5 16.5 12.5H7.5C7.08579 12.5 6.75 12.1642 6.75 11.75C6.75 11.3358 7.08579 11 7.5 11H16.5ZM19.5 6C19.9142 6 20.25 6.33579 20.25 6.75C20.25 7.16421 19.9142 7.5 19.5 7.5H4.5C4.08579 7.5 3.75 7.16421 3.75 6.75C3.75 6.33579 4.08579 6 4.5 6H19.5Z" fill="#212121" />
+                        </svg>
+                    </span>
+                    <select id="cat" name="category" class="form-control mr-2" style="font-size: small;">
+                        <option value="">All Sub Categories</option>
+                        <option value="Kazak">Kazak</option>
+                        <option value="Lifestyle Ayakkabı">Lifestyle Ayakkabı</option>
+                        <option value="Loafer">Loafer</option>
+                        <option value="Outdoor Ayakkabısı">Outdoor Ayakkabısı</option>
+                        <option value="Plaj Terliği">Plaj Terliği</option>
+                        <option value="Sandalet">Sandalet</option>
+                        <option value="Stiletto">Stiletto</option>
+                        <option value="Terlik">Terlik</option>
+                        <option value="Topuklu Ayakkabı">Topuklu Ayakkabı</option>
+                        <option value="Topuklu Sandalet">Topuklu Sandalet</option>
+                        <option value="Topuklu Terlik">Topuklu Terlik</option>
+                        <option value="Topuklu Çizme">Topuklu Çizme</option>
+                        <option value="Tote Çanta">Tote Çanta</option>
+                        <option value="Training Ayakkabısı">Training Ayakkabısı</option>
+                        <option value="Voleybol Ayakkabısı">Voleybol Ayakkabısı</option>
+                    </select>
+
+                    <select id="gen" name="gender" class="form-control mr-2" style="font-size: small;">
+                        <option value="all">All Genders</option>
+                        <option value="Kadın">Kadın</option>
+                        <option value="male">Erkek</option>
+                    </select>
+                    <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">
+                        
+                        <option value="keyword">Keyword</option>
+                        <option value="vector">Vector</option>
+                        <option value="rewrite">Rewrite + Vector</option>
+                        <option value="custom1">Custom 1</option>
+                        <option value="custom2">Custom 2</option>
+                        <option value="custom3">Custom 3</option>
+                    </select>
+                    <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
+                        <option value=20 >20 results</option>
+                        <option value=50 >50 results</option>
+                        <option value=100 >100 results</option>
+                    </select>
+                    <select id="sor" name="sortby" class="form-control mr-2"  style="font-size: small;">
+                        <option value="default" >Sort by Score</option>
+                        <option value="price" >Sort by Price</option>
+                        <option value="name" >Sort by Name</option>
+                    </select>
+                </form>
+
+                <p>Showing {{ products|length }} results for "{% if q2 != '' %}{{q2}}{% else %}{{q}}{% endif %}" <span style="font-style: italic;color: rgb(255, 113, 113);">Time elapsed: {{ (timeelapsed*1000)|round|int}} ms</span></p>
+
+                <div class="row">
+                    {% for product in products %}
+                        <div class="col-md-3">
+                            <div class="card mb-3 shadow-sm" style="overflow: hidden;">
+                                <img src="{{ product.imageUrl }}" class="card-img-top">
+                                <div class="card-body">
+                                    <span class="card-text"><small class="text-muted">Score: {{ product['@search.score'] }}</small></span>
+                                    <h6 class="card-title">{{ product.name }}</h6>
+                                    <span class="card-icon" title="Product description: {{ product.description}}">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M18.25 3C19.7688 3 21 4.23122 21 5.75V18.25C21 19.7688 19.7688 21 18.25 21H5.75C4.23122 21 3 19.7688 3 18.25V5.75C3 4.23122 4.23122 3 5.75 3H18.25ZM18.25 4.5H5.75C5.05964 4.5 4.5 5.05964 4.5 5.75V18.25C4.5 18.9404 5.05964 19.5 5.75 19.5H18.25C18.9404 19.5 19.5 18.9404 19.5 18.25V5.75C19.5 5.05964 18.9404 4.5 18.25 4.5ZM14.25 11.5H6.75L6.64823 11.5068C6.28215 11.5565 6 11.8703 6 12.25C6 12.6642 6.33579 13 6.75 13H14.25L14.3518 12.9932C14.7178 12.9435 15 12.6297 15 12.25C15 11.8358 14.6642 11.5 14.25 11.5ZM6.75 15.5H17.25C17.6642 15.5 18 15.8358 18 16.25C18 16.6297 17.7178 16.9435 17.3518 16.9932L17.25 17H6.75C6.33579 17 6 16.6642 6 16.25C6 15.8703 6.28215 15.5565 6.64823 15.5068L6.75 15.5ZM17.25 7.5H6.75L6.64823 7.50685C6.28215 7.55651 6 7.8703 6 8.25C6 8.66421 6.33579 9 6.75 9H17.25L17.3518 8.99315C17.7178 8.94349 18 8.6297 18 8.25C18 7.83579 17.6642 7.5 17.25 7.5Z" fill="#212121" />
+                                        </svg>
+                                    </span>
+                                    {% if product[4] != None %}
+                                    <span class="card-icon" title="Image description: {{ product.image_description}}">
+                                        <svg height="16" width="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M10.181 9.684L7.988 11.877H7.281L3.814 8.41L1.934 10.291C1.79816 9.93257 1.69442 9.56278 1.624 9.186L3.461 7.35H4.168L7.634 10.816L9.827 8.623H10.534L13.455 11.545C13.2703 11.8272 13.064 12.0947 12.838 12.345L10.181 9.684Z" fill="#006CBE" />
+                                            <path opacity="0.1" d="M14.5 8C14.5 9.28558 14.1188 10.5423 13.4046 11.6112C12.6903 12.6801 11.6752 13.5132 10.4874 14.0052C9.29972 14.4972 7.99279 14.6259 6.73191 14.3751C5.47104 14.1243 4.31285 13.5052 3.40381 12.5962C2.49476 11.6872 1.8757 10.529 1.62489 9.26809C1.37409 8.00721 1.50281 6.70028 1.99478 5.51256C2.48675 4.32484 3.31987 3.30968 4.38879 2.59545C5.45771 1.88122 6.71442 1.5 8 1.5C9.72391 1.5 11.3772 2.18482 12.5962 3.40381C13.8152 4.62279 14.5 6.27609 14.5 8V8Z" fill="#1F1F1F" />
+                                            <path d="M11 5.5C11 5.79667 10.912 6.08668 10.7472 6.33336C10.5824 6.58003 10.3481 6.77229 10.074 6.88582C9.79993 6.99935 9.49833 7.02906 9.20736 6.97118C8.91639 6.9133 8.64912 6.77044 8.43934 6.56066C8.22956 6.35088 8.0867 6.08361 8.02882 5.79264C7.97094 5.50166 8.00065 5.20006 8.11418 4.92597C8.22771 4.65189 8.41997 4.41762 8.66664 4.2528C8.91332 4.08797 9.20333 4 9.5 4C9.89782 4 10.2794 4.15804 10.5607 4.43934C10.842 4.72064 11 5.10218 11 5.5Z" fill="#B27D00" />
+                                            <path d="M8 1C6.61553 1 5.26215 1.41054 4.11101 2.17971C2.95986 2.94888 2.06266 4.04213 1.53284 5.32122C1.00303 6.6003 0.864406 8.00777 1.1345 9.36563C1.4046 10.7235 2.07128 11.9708 3.05025 12.9497C4.02922 13.9287 5.2765 14.5954 6.63437 14.8655C7.99223 15.1356 9.3997 14.997 10.6788 14.4672C11.9579 13.9373 13.0511 13.0401 13.8203 11.889C14.5895 10.7378 15 9.38447 15 8C15 6.14348 14.2625 4.36301 12.9497 3.05025C11.637 1.7375 9.85651 1 8 1V1ZM8 14C6.81331 14 5.65327 13.6481 4.66658 12.9888C3.67988 12.3295 2.91085 11.3925 2.45672 10.2961C2.0026 9.19974 1.88378 7.99334 2.11529 6.82946C2.3468 5.66557 2.91824 4.59647 3.75736 3.75736C4.59647 2.91824 5.66557 2.3468 6.82946 2.11529C7.99334 1.88378 9.19974 2.0026 10.2961 2.45672C11.3925 2.91085 12.3295 3.67988 12.9888 4.66658C13.6481 5.65327 14 6.81331 14 8C14 9.5913 13.3679 11.1174 12.2426 12.2426C11.1174 13.3679 9.5913 14 8 14Z" fill="#1F1F1F" />
+                                        </svg>
+                                    </span>
+                                    {% endif %}
+
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    {% endfor %}
                 </div>
-            {% endfor %}
+            </div>
         </div>
-
     </div>
 </br></br>
+<script>
+    console.log("Products variable:", {{ products|tojson }});
+    console.log("result:", {{ facets|tojson }});
+</script>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
@@ -264,5 +284,69 @@
 
 
     </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+    
+        <script>  
+            // This line uses server-side templating to inject the JSON data into a JavaScript variable  
+            const facetData = {{ facets|tojson }};  
+              
+            console.log("result:", facetData);  
+      
+            // Function to create grouped facet lists  
+            function createGroupedFacetList(data) {  
+                const facetContainer = document.getElementById('facetContainer');  
+      
+                Object.keys(data).forEach(category => {  
+                    // Create a container for each category  
+                    const categoryDiv = document.createElement('div');  
+                    categoryDiv.className = 'facet-group';  
+      
+                    // Create a heading for the category  
+                    const categoryHeading = document.createElement('h3');  
+                    categoryHeading.textContent = category;  
+                    categoryDiv.appendChild(categoryHeading);  
+      
+                    // Create a list for the category items  
+                    const categoryList = document.createElement('ul');  
+                    categoryList.className = 'searchResults__facetControl-list list-group';  
+      
+                    data[category].forEach(item => {  
+                        const li = document.createElement('li');  
+                        li.className = 'searchResults__facetControl list-group-item';  
+      
+                        const divWrapper = document.createElement('div');  
+                        divWrapper.className = 'searchResults__facetControl-checkbox-wrapper checkbox';  
+      
+                        const label = document.createElement('label');  
+                        label.className = 'checkboxLabel';  
+      
+                        const input = document.createElement('input');  
+                        input.type = 'checkbox';  
+                        input.className = 'searchResults__facetControl-checkbox';  
+                        input.value = 'on';  
+      
+                        const textNode = document.createTextNode(` ${item.value} (${item.count})`);  
+      
+                        label.appendChild(input);  
+                        label.appendChild(textNode);  
+                        divWrapper.appendChild(label);  
+                        li.appendChild(divWrapper);  
+                        categoryList.appendChild(li);  
+                    });  
+      
+                    // Append the list to the category container  
+                    categoryDiv.appendChild(categoryList);  
+      
+                    // Append the category container to the main facet container  
+                    facetContainer.appendChild(categoryDiv);  
+                });  
+            }  
+      
+            // Call the function to create grouped list items  
+            createGroupedFacetList(facetData);  
+        </script>  
 </body>
+
 </html>
