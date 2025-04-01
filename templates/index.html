@@ -251,18 +251,34 @@
         $(document).ready(function() {  
             // Parse URL to get filter selections  
             const urlParams = new URLSearchParams(window.location.search);  
-            //const savedFilters = JSON.parse(localStorage.getItem('selectedFilters')) || {};
-            //console.log("Saved Filters in the body:", savedFilters); 
-        
+            const filterParam = urlParams.get('f') || '';
+            window.selectedFilters = {};
+
+            if (filterParam) {
+                filterParam.split(',').forEach(filter => {
+                    const [category, values] = filter.split(':');
+                    window.selectedFilters[category] = values.replace(/%20/g, ' ').split('|');
+                });
+            }
+
+            // Set initial checkbox states based on URL parameters
+            Object.keys(window.selectedFilters).forEach(category => {
+                window.selectedFilters[category].forEach(value => {
+                    $(`.facet-group:contains(${category}) input[type='checkbox'][value='${value}']`).prop('checked', true);
+                });
+            });
             // Set initial values for other filters  
             $('#cat').val(urlParams.get('c') || '');  
             $('#gen').val(urlParams.get('g') || '');  
             $('#sea').val(urlParams.get('q') || '');  
-            $('#typ').val(urlParams.get('t') || '');  
+            $('#typ').val(urlParams.get('t') || '');  // <-- Ensure this line is present
             $('#res').val(urlParams.get('i') || 20);  
             $('#sor').val(urlParams.get('s') || 'default');
-            
-        });  
+
+                $('#typ').on('change', function() {
+        makesearch();
+    });
+        });   
 
 
     </script>
@@ -323,25 +339,33 @@
       
  
             let selectedFilters = {};
+            let debounceTimer;
 
             function handleFilterChange(event) {  
-                selectedFilters = {};  
-                const checkboxes = document.querySelectorAll('.searchResults__facetControl-checkbox');  
-            
-                checkboxes.forEach(checkbox => {  
-                    if (checkbox.checked) {  
-                        const category = checkbox.closest('.facet-group').querySelector('h3').textContent;  
-                        if (!selectedFilters[category]) {  
-                            selectedFilters[category] = [];  
-                        }  
-                        selectedFilters[category].push(checkbox.value);  
-                    }  
-                });  
-            
-                console.log("Selected Filters:", selectedFilters);  
-                //localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
-                makesearch(); // Call makesearch after updating filters  
-            }  
+                const checkbox = event.target;
+                const category = checkbox.closest('.facet-group').querySelector('h3').textContent;
+                const value = checkbox.value;
+
+                if (!window.selectedFilters[category]) {
+                    window.selectedFilters[category] = [];
+                }
+
+                if (checkbox.checked) {
+                    if (!window.selectedFilters[category].includes(value)) {
+                        window.selectedFilters[category].push(value);
+                    }
+                } else {
+                    window.selectedFilters[category] = window.selectedFilters[category].filter(v => v !== value);
+                    if (window.selectedFilters[category].length === 0) {
+                        delete window.selectedFilters[category];
+                    }
+                }
+
+                clearTimeout(window.filterTimeout);
+                window.filterTimeout = setTimeout(() => {
+                    makesearch();
+                }, 1000); // 1 second debounce
+            }
             function makesearch() {  
                 var cat = $('#cat').val();  
                 var gen = $('#gen').val();  
@@ -349,18 +373,13 @@
                 var sor = $('#sor').val();  
                 var res = $('#res').val() || 20;  
                 var sea = $('#sea').val() || '';
-            
-                // Convert selectedFilters to a string for the `&f=` parameter  
-                let filterString = Object.keys(selectedFilters)
-                .map(category => `${category}:${selectedFilters[category].join('|')}`)
-                .join(','); 
-            
-                console.log("Filter String:", filterString);  
-            
-                // Redirect with the constructed URL  
-                window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' + gen + '&q=' + sea + '&i=' + res + '&s=' + sor + '&f=' + filterString;  
-                //window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' + gen + '&q=' + sea + '&i=' + res + '&s=' + sor;  
-            }  
+
+                let filterString = Object.keys(window.selectedFilters)
+                    .map(category => `${category}:${window.selectedFilters[category].join('|')}`)
+                    .join(','); 
+
+                window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' + gen + '&q=' + sea + '&i=' + res + '&s=' + sor + '&f=' + encodeURIComponent(filterString);  
+            } 
             
             // Add event listeners for filter checkboxes  
             document.querySelectorAll('.searchResults__facetControl-checkbox').forEach(checkbox => {  

@@ -52,7 +52,7 @@ def product_search_vector(search_query, num_results=50, category=None, price_ran
         search_text=None,  
         vector_queries=[vector_query],  
         top=num_results,  
-        vector_filter_mode=VectorFilterMode.PRE_FILTER,  
+        vector_filter_mode=VectorFilterMode.POST_FILTER,  
         select=["productId", "name", "description", "imageUrl"],  
         filter=filter_query,  
     )  
@@ -69,7 +69,31 @@ def product_search_keyword(search_query, num_results=50, category=None, price_ra
     )  
     results_list = [result for result in results][:num_results]  
     return results_list  
-  
+
+numeric_fields = ["rating", "price"]  # Numeric fields
+collection_fields = ["categories", "tags"]  # Collection fields
+
+def build_filter_query(filter_query, default_category=None):
+    if filter_query:
+        filters = []
+        for filter_item in filter_query.split(','):
+            category, values = filter_item.split(':')
+            values = values.replace('%20', ' ').split('|')
+
+            if category in collection_fields:
+                collection_filter = " or ".join([f"s eq '{value}'" for value in values])
+                filters.append(f"{category}/any(s: {collection_filter})")
+            elif category in numeric_fields:
+                numeric_filter = " or ".join([f"{category} eq {value}" for value in values])
+                filters.append(f"({numeric_filter})")
+            else:
+                string_filter = " or ".join([f"{category} eq '{value}'" for value in values])
+                filters.append(f"({string_filter})")
+
+        return ' and '.join(filters)
+    else:
+        return f"categories/any(s: s eq '{default_category}')" if default_category else None
+    
 @app.route('/', methods=['GET', 'POST'])  
 def index():  
     starttime = time.time()  
@@ -92,23 +116,16 @@ def index():
   
     results = []  
     rewritten_query = ''  
+    numeric_fields = ["rating", "price"]
+    collection_fields = ["categories", "tags"]
+
+    filter_query = request.args.get('f', None)
+    default_category = category
+
+    filter_query = build_filter_query(filter_query, category)
+
     if searchtype == 'keyword':  
-        if filter_query:
-            filters = []
-            for filter_item in filter_query.split(','):
-                category, values = filter_item.split(':')
-                values = values.replace('%20', ' ').split('|')  # Handle URL-encoded spaces and split values
-                
-                # Check if the field is a collection or not
-                if category in ["categories", "tags"]:  # Example of collection fields
-                    filters.append(f"{category}/any(s: s eq '{' or s eq '.join(values)}')")
-                else:  # For non-collection fields
-                    filters.append(f"({category} eq '{' or '.join(values)}')")
-
-            filter_query = ' and '.join(filters)
-        else:
-            filter_query = f"categories/any(s: s eq '{category}')" if category else None
-
+   
         # Perform the search
         results = search_client.search(  
             search_text=search_query,  
@@ -123,16 +140,16 @@ def index():
             k_nearest_neighbors=50,  
             fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
         )  
-        filter_query = f"categories/any(s: s eq '{category}')" if category else None  
         results = search_client.search(  
             search_text=None,  
             vector_queries=[vector_query],  
             top=items,  
-            vector_filter_mode=VectorFilterMode.PRE_FILTER,  
+            vector_filter_mode=VectorFilterMode.POST_FILTER,  
             select=["productId", "name", "description", "imageUrl"],  
             filter=filter_query,  
             facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
-        )  
+        ) 
+        
     elif searchtype == 'rewrite':  
         rewritten_query = rewrite_search_query(search_query)  
         vector_query = VectorizableTextQuery(  
