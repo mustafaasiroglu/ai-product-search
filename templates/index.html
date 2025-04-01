@@ -248,39 +248,21 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#cat').val('{{ c }}');
-            $('#gen').val('{{ g }}');
-            $('#sea').val('{{ q }}');
-            $('#typ').val('{{ t }}');
-            $('#res').val('{{ i }}');
-            $('#sor').val('{{ s }}');
-        });
-
-        //onchange of selects
-
-        function makesearch() {
-            var cat = $('#cat').val();
-            var gen = $('#gen').val();
-            var typ = $('#typ').val();
-            var sor = $('#sor').val();
-            var res = $('#res').val()||20;
-            var sea = $('#sea').val()||'';
-            window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' +gen + '&q=' + sea+'&i='+res +'&s='+sor;
-        };
-
-        $('#cat, #typ, #res, #gen').change(function() {
-            $('#inputform').submit();
-        });
-
-        $('#inputform').submit(function() {
-            makesearch();
-            return false;
-        });
-
-        //onsubmit of form
-
-
+        $(document).ready(function() {  
+            // Parse URL to get filter selections  
+            const urlParams = new URLSearchParams(window.location.search);  
+            //const savedFilters = JSON.parse(localStorage.getItem('selectedFilters')) || {};
+            //console.log("Saved Filters in the body:", savedFilters); 
+        
+            // Set initial values for other filters  
+            $('#cat').val(urlParams.get('c') || '');  
+            $('#gen').val(urlParams.get('g') || '');  
+            $('#sea').val(urlParams.get('q') || '');  
+            $('#typ').val(urlParams.get('t') || '');  
+            $('#res').val(urlParams.get('i') || 20);  
+            $('#sor').val(urlParams.get('s') || 'default');
+            
+        });  
 
 
     </script>
@@ -289,26 +271,21 @@
         crossorigin="anonymous"></script>
     
         <script>  
-            // This line uses server-side templating to inject the JSON data into a JavaScript variable  
             const facetData = {{ facets|tojson }};  
               
             console.log("result:", facetData);  
       
-            // Function to create grouped facet lists  
             function createGroupedFacetList(data) {  
                 const facetContainer = document.getElementById('facetContainer');  
       
                 Object.keys(data).forEach(category => {  
-                    // Create a container for each category  
                     const categoryDiv = document.createElement('div');  
                     categoryDiv.className = 'facet-group';  
       
-                    // Create a heading for the category  
                     const categoryHeading = document.createElement('h3');  
                     categoryHeading.textContent = category;  
                     categoryDiv.appendChild(categoryHeading);  
       
-                    // Create a list for the category items  
                     const categoryList = document.createElement('ul');  
                     categoryList.className = 'searchResults__facetControl-list list-group';  
       
@@ -325,7 +302,10 @@
                         const input = document.createElement('input');  
                         input.type = 'checkbox';  
                         input.className = 'searchResults__facetControl-checkbox';  
-                        input.value = 'on';  
+                        input.value = item.value;  
+      
+                        // Add event listener to trigger filter update  
+                        input.addEventListener('change', handleFilterChange);  
       
                         const textNode = document.createTextNode(` ${item.value} (${item.count})`);  
       
@@ -336,15 +316,57 @@
                         categoryList.appendChild(li);  
                     });  
       
-                    // Append the list to the category container  
                     categoryDiv.appendChild(categoryList);  
-      
-                    // Append the category container to the main facet container  
                     facetContainer.appendChild(categoryDiv);  
                 });  
             }  
       
-            // Call the function to create grouped list items  
+ 
+            let selectedFilters = {};
+
+            function handleFilterChange(event) {  
+                selectedFilters = {};  
+                const checkboxes = document.querySelectorAll('.searchResults__facetControl-checkbox');  
+            
+                checkboxes.forEach(checkbox => {  
+                    if (checkbox.checked) {  
+                        const category = checkbox.closest('.facet-group').querySelector('h3').textContent;  
+                        if (!selectedFilters[category]) {  
+                            selectedFilters[category] = [];  
+                        }  
+                        selectedFilters[category].push(checkbox.value);  
+                    }  
+                });  
+            
+                console.log("Selected Filters:", selectedFilters);  
+                //localStorage.setItem('selectedFilters', JSON.stringify(selectedFilters));
+                makesearch(); // Call makesearch after updating filters  
+            }  
+            function makesearch() {  
+                var cat = $('#cat').val();  
+                var gen = $('#gen').val();  
+                var typ = $('#typ').val();  
+                var sor = $('#sor').val();  
+                var res = $('#res').val() || 20;  
+                var sea = $('#sea').val() || '';
+            
+                // Convert selectedFilters to a string for the `&f=` parameter  
+                let filterString = Object.keys(selectedFilters)
+                .map(category => `${category}:${selectedFilters[category].join('|')}`)
+                .join(','); 
+            
+                console.log("Filter String:", filterString);  
+            
+                // Redirect with the constructed URL  
+                window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' + gen + '&q=' + sea + '&i=' + res + '&s=' + sor + '&f=' + filterString;  
+                //window.location.href = '/?c=' + cat + '&t=' + typ + '&g=' + gen + '&q=' + sea + '&i=' + res + '&s=' + sor;  
+            }  
+            
+            // Add event listeners for filter checkboxes  
+            document.querySelectorAll('.searchResults__facetControl-checkbox').forEach(checkbox => {  
+                checkbox.addEventListener('change', handleFilterChange);  
+            });  
+            
             createGroupedFacetList(facetData);  
         </script>  
 </body>

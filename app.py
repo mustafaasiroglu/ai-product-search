@@ -81,25 +81,42 @@ def index():
         searchtype = request.form.get('searchtype', 'keyword')  
         items = int(request.form.get('items', 20))  
         return redirect(url_for('index', q=search_query, c=category, t=searchtype, g=gender, i=items, s=sortby))  
-    else:  
+    else:   
         search_query = request.args.get('q', '')  
         category = request.args.get('c', '')  
         gender = request.args.get('g', None)  
         sortby = request.args.get('s', 'default')  
         searchtype = request.args.get('t', 'keyword')  
-        items = int(request.args.get('i', 20))  
+        items = int(request.args.get('i', 20))
+        filter_query = request.args.get('f', None)
   
     results = []  
     rewritten_query = ''  
     if searchtype == 'keyword':  
-        filter_query = f"categories/any(s: s eq '{category}')" if category else None  
+        if filter_query:
+            filters = []
+            for filter_item in filter_query.split(','):
+                category, values = filter_item.split(':')
+                values = values.replace('%20', ' ').split('|')  # Handle URL-encoded spaces and split values
+                
+                # Check if the field is a collection or not
+                if category in ["categories", "tags"]:  # Example of collection fields
+                    filters.append(f"{category}/any(s: s eq '{' or s eq '.join(values)}')")
+                else:  # For non-collection fields
+                    filters.append(f"({category} eq '{' or '.join(values)}')")
+
+            filter_query = ' and '.join(filters)
+        else:
+            filter_query = f"categories/any(s: s eq '{category}')" if category else None
+
+        # Perform the search
         results = search_client.search(  
             search_text=search_query,  
             top=items,  
             select=["productId", "name", "description", "imageUrl"],  
             filter=filter_query,  
             facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
-        )  
+        )
     elif searchtype == 'vector':  
         vector_query = VectorizableTextQuery(  
             text=search_query,  
@@ -174,5 +191,6 @@ def index():
   
     return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, g=gender, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets)  
   
+    
 if __name__ == '__main__':  
     app.run(debug=True)  
