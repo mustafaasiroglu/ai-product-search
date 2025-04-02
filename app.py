@@ -41,30 +41,28 @@ def rewrite_search_query(search_query):
     rewritten_query = response.choices[0].message.content.strip()  
     return rewritten_query  
   
-def product_search_vector(search_query, num_results=50, category=None, price_range=None, gender=None):  
+def product_search_vector(search_query, num_results=50, filter_query=None):  
     vector_query = VectorizableTextQuery(  
         text=search_query,  
         k_nearest_neighbors=50,  
         fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
     )  
-    filter_query = f"categories/any(s: s eq '{category}')" if category else None  
     results = search_client.search(  
         search_text=None,  
         vector_queries=[vector_query],  
         top=num_results,  
         vector_filter_mode=VectorFilterMode.POST_FILTER,  
-        select=["productId", "name", "description", "imageUrl"],  
+        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
         filter=filter_query,  
     )  
     results_list = [result for result in results][:num_results]  
     return results_list  
   
-def product_search_keyword(search_query, num_results=50, category=None, price_range=None, gender=None):  
-    filter_query = f"categories/any(s: s eq '{category}')" if category else None  
+def product_search_keyword(search_query, num_results=50, filter_query=None):  
     results = search_client.search(  
         search_text=search_query,  
         top=num_results,  
-        select=["productId", "name", "description", "imageUrl"],  
+        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
         filter=filter_query,  
     )  
     results_list = [result for result in results][:num_results]  
@@ -73,7 +71,7 @@ def product_search_keyword(search_query, num_results=50, category=None, price_ra
 numeric_fields = ["rating", "price"]  # Numeric fields
 collection_fields = ["categories", "tags"]  # Collection fields
 
-def build_filter_query(filter_query, default_category=None):
+def build_filter_query(filter_query):
     if filter_query:
         filters = []
         for filter_item in filter_query.split(','):
@@ -92,49 +90,93 @@ def build_filter_query(filter_query, default_category=None):
 
         return ' and '.join(filters)
     else:
-        return f"categories/any(s: s eq '{default_category}')" if default_category else None
+        return None
     
 @app.route('/', methods=['GET', 'POST'])  
 def index():  
     starttime = time.time()  
     if request.method == 'POST':  
         search_query = request.form.get('search_query')  
-        category = request.form.get('category', '')  
-        gender = request.form.get('gender', None)  
-        sortby = request.form.get('sortby', 'default')  
-        searchtype = request.form.get('searchtype', 'keyword')  
+        profile = request.form.get('profile', 'general')  
+        sortby = request.form.get('sortby', '')  
+        searchtype = request.form.get('searchtype', 'auto')  
         items = int(request.form.get('items', 20))  
-        return redirect(url_for('index', q=search_query, c=category, t=searchtype, g=gender, i=items, s=sortby))  
+        return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby))  
     else:   
-        search_query = request.args.get('q', '')  
-        category = request.args.get('c', '')  
-        gender = request.args.get('g', None)  
-        sortby = request.args.get('s', 'default')  
-        searchtype = request.args.get('t', 'keyword')  
+        search_query = request.args.get('q', '')
+        profile = request.args.get('p', '')
+        searchtype = request.args.get('t', 'auto')
         items = int(request.args.get('i', 20))
+        sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
   
     results = []  
     rewritten_query = ''  
-    numeric_fields = ["rating", "price"]
-    collection_fields = ["categories", "tags"]
 
     filter_query = request.args.get('f', None)
-    default_category = category
 
-    filter_query = build_filter_query(filter_query, category)
+    filter_query = build_filter_query(filter_query)
 
-    if searchtype == 'keyword':  
-   
+    if searchtype == 'auto':     
+        # check the query length and decide the search type, if its more then 3 words, use vector search, else keyword search
+        if len(search_query.split()) >= 3:  
+            vector_query = VectorizableTextQuery(  
+                text=search_query,  
+                k_nearest_neighbors=50,  
+                fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+            )
+
+            #if sortby not null or empty:
+            if sortby != '' and sortby != None:
+                results = search_client.search(  
+                                search_text=None,  
+                                vector_queries=[vector_query],  
+                                top=items,  
+                                vector_filter_mode=VectorFilterMode.POST_FILTER,
+                                select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+                                filter=filter_query,  
+                                facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"],
+                                order_by="" + sortby + " desc"
+            )    
+            else:
+                results = search_client.search(  
+                                search_text=None,  
+                                vector_queries=[vector_query],  
+                                top=items,  
+                                vector_filter_mode=VectorFilterMode.POST_FILTER,
+                                select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+                                filter=filter_query,  
+                                facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]
+                            )           
+        else:
+            if sortby != '' and sortby != None:
+                results = search_client.search(  
+                    search_text=search_query,  
+                    top=items,  
+                    select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+                    filter=filter_query,  
+                    facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"],
+                    order_by="" + sortby + " desc"
+                )
+            else:
+                results = search_client.search(  
+                    search_text=search_query,  
+                    top=items,  
+                    select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+                    filter=filter_query,  
+                    facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]
+                )
+        
+    elif searchtype == 'keyword':     
         # Perform the search
         results = search_client.search(  
             search_text=search_query,  
             top=items,  
-            select=["productId", "name", "description", "imageUrl"],  
+            select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
             filter=filter_query,  
             facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
-        )
-    elif searchtype == 'vector':  
+        )        
+    elif searchtype == 'vector' and search_query != '':
         vector_query = VectorizableTextQuery(  
             text=search_query,  
             k_nearest_neighbors=50,  
@@ -145,7 +187,16 @@ def index():
             vector_queries=[vector_query],  
             top=items,  
             vector_filter_mode=VectorFilterMode.POST_FILTER,  
-            select=["productId", "name", "description", "imageUrl"],  
+            select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+            filter=filter_query,  
+            facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
+        ) 
+    elif searchtype == 'vector' and search_query == '':
+        # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
+        results = search_client.search(  
+            search_text=search_query,  
+            top=items,  
+            select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
             filter=filter_query,  
             facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
         ) 
@@ -157,56 +208,23 @@ def index():
             k_nearest_neighbors=50,  
             fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
         )  
-        filter_query = f"categories/any(s: s eq '{category}')" if category else None  
         results = search_client.search(  
             search_text=None,  
             vector_queries=[vector_query],  
             top=items,  
             vector_filter_mode=VectorFilterMode.PRE_FILTER,  
-            select=["productId", "name", "description", "imageUrl"],  
+            select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
             filter=filter_query,  
             facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
         )  
-    elif searchtype == 'custom1':  
-        vector_query = VectorizableTextQuery(  
-            text=search_query,  
-            k_nearest_neighbors=50,  
-            fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
-        )  
-        filter_query = f"genderName eq 'Kadın'" if gender else None  
-        results = search_client.search(  
-            search_text=None,  
-            vector_queries=[vector_query],  
-            top=items,  
-            vector_filter_mode=VectorFilterMode.PRE_FILTER,  
-            select=["productId", "name", "description", "imageUrl"],  
-            filter=filter_query,  
-            facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
-        )  
-    elif searchtype == 'custom2':  
-        vector_query = VectorizableTextQuery(  
-            text=search_query,  
-            k_nearest_neighbors=50,  
-            fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
-        )  
-        filter_query = f"genderName eq '{gender}'" if gender else None  
-        results = search_client.search(  
-            search_text=None,  
-            vector_queries=[vector_query],  
-            top=items,  
-            vector_filter_mode=VectorFilterMode.PRE_FILTER,  
-            select=["productId", "name", "description", "imageUrl"],  
-            filter=filter_query,  
-            facets=["brandName", "genderName", "colorName", "mainCategoryName", "rating"]  
-        )  
-  
+
     products = [result for result in results]  
 
     facets = results.get_facets()
 
     timeelapsed = time.time() - starttime  
   
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, c=category, g=gender, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets)  
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets)  
   
     
 if __name__ == '__main__':  
