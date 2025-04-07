@@ -45,7 +45,7 @@ def product_search_vector(search_query, num_results=50, filter_query=None):
     vector_query = VectorizableTextQuery(  
         text=search_query,  
         k_nearest_neighbors=50,  
-        fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+        fields=global_enbedding_fields  
     )  
     results = search_client.search(  
         search_text=None,  
@@ -94,6 +94,7 @@ def build_filter_query(filter_query):
 
 global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
 global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"]
+global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
 
 def vector_search_client_call(vector_query, items, filter_query, facets=None, sortby=None):
     search_args = {
@@ -167,7 +168,7 @@ def index():
                     vector_query = VectorizableTextQuery(  
                         text=search_query,  
                         k_nearest_neighbors=50,  
-                        fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+                        fields=global_enbedding_fields  
                     )  
                     results = vector_search_client_call(vector_query, items, filter_query, global_filter)
             elif searchtype == 'vector' and search_query == '':
@@ -187,7 +188,7 @@ def index():
         vector_query = VectorizableTextQuery(  
             text=search_query,  
             k_nearest_neighbors=50,  
-            fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+            fields=global_enbedding_fields  
         )  
         results = vector_search_client_call(vector_query, items, filter_query, global_filter) 
     elif searchtype == 'vector' and search_query == '':
@@ -199,7 +200,7 @@ def index():
         vector_query = VectorizableTextQuery(  
             text=rewritten_query,  
             k_nearest_neighbors=50,  
-            fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+            fields=global_enbedding_fields  
         )  
         results = vector_search_client_call(vector_query, items, filter_query, global_filter) 
 
