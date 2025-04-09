@@ -174,15 +174,6 @@
                         <option value="totalOrderCount">Order Count</option>
                     </select>
 
-                    <select id="typ" name="searchtype" class="form-control mr-2"  style="font-size: small;">                        
-                        <option value="keyword">Keyword</option>
-                        <option value="vector">Vector</option>
-                        <option value="rewrite">Rewrite + Vector</option>
-                        <option value="auto">Auto</option>
-                        <option value="custom2">Custom 2</option>
-                        <option value="custom3">Custom 3</option>
-                    </select>
-
                     <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
                         <option value=20 >20 results</option>
                         <option value=50 >50 results</option>
@@ -256,13 +247,11 @@
             // Set initial values for other filters  
             $('#pro').val(urlParams.get('p') || 'default');
             $('#srt').val(urlParams.get('s') || '');
-            $('#typ').val(urlParams.get('t') || 'auto');
             $('#res').val(urlParams.get('i') || 20);
             $('#sea').val(urlParams.get('q') || '');
             
 
-            $('#pro, #srt, #typ, #res').on('change', function() {
-                //handleFilterChange();
+            $('#pro, #srt, #res').on('change', function() {
                 makesearch();
              });
         });   
@@ -355,7 +344,6 @@
             }
             function makesearch() {  
                 var pro = $('#pro').val();  
-                var typ = $('#typ').val();  
                 var res = $('#res').val() || 20;  
                 var sea = $('#sea').val() || '';
                 var srt = $('#srt').val(); 
@@ -365,7 +353,7 @@
                     .map(category => `${category}:${window.selectedFilters[category].join('|')}`)
                     .join(','); 
 
-                window.location.href = '/?p=' + pro + '&t=' + typ + '&q=' + sea + '&i=' + res + '&s=' + srt + '&f=' + encodeURIComponent(filterString);  
+                window.location.href = '/?p=' + pro + '&q=' + sea + '&i=' + res + '&s=' + srt + '&f=' + encodeURIComponent(filterString);  
             } 
             
             // Add event listeners for filter checkboxes  

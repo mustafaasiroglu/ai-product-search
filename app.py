@@ -206,7 +206,12 @@ def index():
 
     products = [result for result in results]  
 
-    facets = results.get_facets()
+    # check if products is empty and if so, dont show the facets
+    if len(products) == 0:
+        facets = []
+    else:
+        # Get facets from the results
+        facets = results.get_facets()
 
     timeelapsed = time.time() - starttime  
 
