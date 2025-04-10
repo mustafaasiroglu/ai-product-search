@@ -9,10 +9,12 @@ from azure.search.documents.models import VectorizableTextQuery
 from azure.search.documents.models import QueryType  
 from openai import AzureOpenAI  
 import time  
+import logging
   
+logging.basicConfig(level=logging.DEBUG)
+
 app = Flask(__name__)  
   
-# Load environment variables  
 search_endpoint = os.environ.get('search_endpoint')  
 search_key = os.environ.get('search_key')  
 search_index = os.environ.get('search_index')  
@@ -39,8 +41,8 @@ def rewrite_search_query(search_query):
         temperature=0.5,  
     )  
     rewritten_query = response.choices[0].message.content.strip()  
-    return rewritten_query  
-  
+    return rewritten_query 
+
 def product_search_vector(search_query, num_results=50, filter_query=None):  
     vector_query = VectorizableTextQuery(  
         text=search_query,  
@@ -52,7 +54,7 @@ def product_search_vector(search_query, num_results=50, filter_query=None):
         vector_queries=[vector_query],  
         top=num_results,  
         vector_filter_mode=VectorFilterMode.POST_FILTER,  
-        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount"],  
         filter=filter_query,  
     )  
     results_list = [result for result in results][:num_results]  
@@ -62,7 +64,7 @@ def product_search_keyword(search_query, num_results=50, filter_query=None):
     results = search_client.search(  
         search_text=search_query,  
         top=num_results,  
-        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"],  
+        select=["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount"],  
         filter=filter_query,  
     )  
     results_list = [result for result in results][:num_results]  
@@ -93,7 +95,7 @@ def build_filter_query(filter_query):
         return None
 
 global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
-global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","productCreatedDate","totalOrderCount"]
+global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount"]
 global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
 
 def vector_search_client_call(vector_query, items, filter_query, facets=None, sortby=None):
@@ -108,7 +110,12 @@ def vector_search_client_call(vector_query, items, filter_query, facets=None, so
     }
     if sortby:
         search_args["order_by"] = f"{sortby} desc"
-    return search_client.search(**search_args)
+    
+    results = search_client.search(**search_args)
+    logging.debug(f"Vector Search results: {results}")
+    if results is None:  # Handle None case
+        return []
+    return results
 
 def keyword_search_client_call(search_query, items, filter_query, facets=None, sortby=None):
     search_args = {
@@ -120,7 +127,12 @@ def keyword_search_client_call(search_query, items, filter_query, facets=None, s
     }
     if sortby:
         search_args["order_by"] = f"{sortby} desc"
-    return search_client.search(**search_args)
+    
+    results = search_client.search(**search_args)
+    logging.debug(f"Key Search results: {results}")
+    if results is None:  # Handle None case
+        return []
+    return results
     
 @app.route('/', methods=['GET', 'POST'])  
 def index():  
@@ -133,7 +145,7 @@ def index():
         items = int(request.form.get('items', 20))  
         return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby))  
     else:   
-        search_query = request.args.get('q', '')
+        search_query = request.args.get('q', '*')
         profile = request.args.get('p', '')
         searchtype = request.args.get('t', 'auto')
         items = int(request.args.get('i', 20))
@@ -154,7 +166,7 @@ def index():
             vector_query = VectorizableTextQuery(  
                 text=rewritten_query,  
                 k_nearest_neighbors=50,  
-                fields="descriptionEmbedding,nameEmbedding,tagEmbedding"  
+                fields=global_enbedding_fields 
             )
 
             #if sortby not null or empty:
@@ -211,14 +223,19 @@ def index():
         facets = []
     else:
         # Get facets from the results
-        facets = results.get_facets()
+        facets = results.get_facets() if results.get_facets() else []
 
     timeelapsed = time.time() - starttime  
 
     
-  
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets)  
-  
+    # check products and facets to be of json format
+    if isinstance(products, list):
+        products = [dict(product) for product in products if product is not None]
+    if isinstance(facets, list):
+        facets = [dict(facet) for facet in facets if facet is not None]
+
+
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info={})  
     
 if __name__ == '__main__':  
     app.run(debug=True)
