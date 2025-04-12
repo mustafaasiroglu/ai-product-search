@@ -33,7 +33,30 @@ def rewrite_search_query(search_query):
         azure_endpoint=os.environ.get('azure_openai_endpoint'),  
         api_key=os.environ.get('azure_openai_key'),  
     )  
-    prompt = f"Rewrite the following query as simple product search query. Output should include few words, no verbs, no full sentence. Keep original language same. Query: {search_query}"  
+    prompt = '''
+Rewrite the following Turkish customer query into a minimal product search query for our ecommerce shop.
+
+Rules:
+1. Output only essential keywords, with no complete sentences or verbs.
+2. Preserve the original Turkish language and any local slang.
+3. Convert family reference expressions into standardized product target categories:
+   - For expressions like "kızım", "my daughter": 
+     • If the context implies a child’s product, convert to "kız". 
+     • If it implies an adult product, convert to "kadın". 
+   - For expressions like "oğlum", "my son": 
+     • If the context implies a child’s product, convert to "oğlan". 
+     • If it implies an adult product, convert to "erkek".
+   - Remove possessive adjectives (e.g., "my") and reduce to the essential category term.
+4. Maintain the following attribute order when present:
+   a. Color (e.g., "pembe")
+   b. Main product type (e.g., "snowboard")
+   c. Specific product form (e.g., "ayakkabıları")
+   d. Qualifiers (e.g., "kızım için") – include these only if they are critical for filtering.
+5. Do not replace terms with unrelated synonyms; keep the meaning as intended by the customer.
+
+Query:
+
+''' + search_query
     response = client.chat.completions.create(  
         messages=[{"role": "user", "content": prompt}],  
         model=os.environ.get('azure_openai_model'),  
