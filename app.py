@@ -121,12 +121,14 @@ global_filter = ["brandName","genderName","colorName","mainCategoryName","rating
 global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount"]
 global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
 
-def vector_search_client_call(vector_query, items, filter_query, facets=None, sortby=None):
+def vector_search_client_call(search_query, vector_query, items, filter_query, facets=None, sortby=None):
     search_args = {
-        "search_text": None,
+        "search_text": search_query,
         "vector_queries": [vector_query],
         "include_total_count": True,
         "top": items,
+        "query_type": "semantic",
+        "semantic_configuration_name": "semantic-config",
         "vector_filter_mode": VectorFilterMode.POST_FILTER,
         "select": global_select,
         "filter": filter_query,
@@ -145,6 +147,8 @@ def keyword_search_client_call(search_query, items, filter_query, facets=None, s
     search_args = {
         "search_text": search_query,
         "include_total_count": True,
+        "query_type": "semantic",
+        "semantic_configuration_name": "semantic-config",
         "top": items,
         "select": global_select,
         "filter": filter_query,
@@ -196,9 +200,9 @@ def index():
 
             #if sortby not null or empty:
             if sortby != '' and sortby != None:
-                results = vector_search_client_call(vector_query, items, filter_query, global_filter, sortby)
+                results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter, sortby)
             else:
-                results = vector_search_client_call(vector_query, items, filter_query, global_filter)
+                results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter)
         # if the query length is between 3 and 5 words, use vector search with filter
         elif len(search_query.split()) < 5 and len(search_query.split()) > 2:
             if search_query != '':
@@ -207,7 +211,7 @@ def index():
                         k_nearest_neighbors=50,  
                         fields=global_enbedding_fields  
                     )  
-                    results = vector_search_client_call(vector_query, items, filter_query, global_filter)
+                    results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter)
             elif search_query == '':
                     # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
                     results = keyword_search_client_call(search_query, items, filter_query, global_filter)
@@ -227,7 +231,7 @@ def index():
             k_nearest_neighbors=50,  
             fields=global_enbedding_fields  
         )  
-        results = vector_search_client_call(vector_query, items, filter_query, global_filter) 
+        results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter) 
     elif search_query == '':
         # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
         results = keyword_search_client_call(search_query, items, filter_query, global_filter) 
