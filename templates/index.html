@@ -269,20 +269,20 @@
                     const categoryDiv = document.createElement('div');  
                     categoryDiv.className = 'facet-group';  
       
-                    categoryName = category;
-                    if (category === 'brandName') {  
-                        categoryName = 'Brand';
-                    } else if (category === 'mainCategoryName') {
-                        categoryName = 'Category';  
-                    } else if (category === 'colorName') {  
-                        categoryName = 'Color';  
-                    } else if (category === 'rating') {
-                        categoryName = 'Rating';
-                    }
+                    // categoryName = category;
+                    // if (category === 'brandName') {  
+                    //     categoryName = 'Brand';
+                    // } else if (category === 'mainCategoryName') {
+                    //     categoryName = 'Category';  
+                    // } else if (category === 'colorName') {  
+                    //     categoryName = 'Color';  
+                    // } else if (category === 'rating') {
+                    //     categoryName = 'Rating';
+                    // }
                     
 
                     const categoryHeading = document.createElement('h3');  
-                    categoryHeading.textContent = categoryName;  
+                    categoryHeading.textContent = category;  
                     categoryDiv.appendChild(categoryHeading);  
       
                     const categoryList = document.createElement('ul');  
