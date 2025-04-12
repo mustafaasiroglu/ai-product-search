@@ -102,11 +102,12 @@ def vector_search_client_call(vector_query, items, filter_query, facets=None, so
     search_args = {
         "search_text": None,
         "vector_queries": [vector_query],
+        "include_total_count": True,
         "top": items,
         "vector_filter_mode": VectorFilterMode.POST_FILTER,
         "select": global_select,
         "filter": filter_query,
-        "facets": facets or []
+        "facets": facets or [],
     }
     if sortby:
         search_args["order_by"] = f"{sortby} desc"
@@ -120,6 +121,7 @@ def vector_search_client_call(vector_query, items, filter_query, facets=None, so
 def keyword_search_client_call(search_query, items, filter_query, facets=None, sortby=None):
     search_args = {
         "search_text": search_query,
+        "include_total_count": True,
         "top": items,
         "select": global_select,
         "filter": filter_query,
@@ -176,14 +178,14 @@ def index():
                 results = vector_search_client_call(vector_query, items, filter_query, global_filter)
         # if the query length is between 3 and 5 words, use vector search with filter
         elif len(search_query.split()) < 5 and len(search_query.split()) > 2:
-            if searchtype == 'vector' and search_query != '':
+            if search_query != '':
                     vector_query = VectorizableTextQuery(  
                         text=search_query,  
                         k_nearest_neighbors=50,  
                         fields=global_enbedding_fields  
                     )  
                     results = vector_search_client_call(vector_query, items, filter_query, global_filter)
-            elif searchtype == 'vector' and search_query == '':
+            elif search_query == '':
                     # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
                     results = keyword_search_client_call(search_query, items, filter_query, global_filter)
         # if word is less than 3, use keyword search
@@ -196,26 +198,17 @@ def index():
     elif searchtype == 'keyword':     
         # Perform the search
         results = keyword_search_client_call(search_query, items, filter_query, global_filter)        
-    elif searchtype == 'vector' and search_query != '':
+    elif search_query != '':
         vector_query = VectorizableTextQuery(  
             text=search_query,  
             k_nearest_neighbors=50,  
             fields=global_enbedding_fields  
         )  
         results = vector_search_client_call(vector_query, items, filter_query, global_filter) 
-    elif searchtype == 'vector' and search_query == '':
+    elif search_query == '':
         # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
         results = keyword_search_client_call(search_query, items, filter_query, global_filter) 
-        
-    elif searchtype == 'rewrite':  
-        rewritten_query = rewrite_search_query(search_query)  
-        vector_query = VectorizableTextQuery(  
-            text=rewritten_query,  
-            k_nearest_neighbors=50,  
-            fields=global_enbedding_fields  
-        )  
-        results = vector_search_client_call(vector_query, items, filter_query, global_filter) 
-
+            
     products = [result for result in results]  
 
     # check if products is empty and if so, dont show the facets
@@ -234,8 +227,10 @@ def index():
     if isinstance(facets, list):
         facets = [dict(facet) for facet in facets if facet is not None]
 
+    total_count = results.get_count() if results.get_count() else 0
+    
 
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info={})  
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info={},total_count=total_count)  
     
 if __name__ == '__main__':  
     app.run(debug=True)
