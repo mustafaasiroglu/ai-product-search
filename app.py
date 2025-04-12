@@ -35,24 +35,22 @@ def rewrite_search_query(search_query):
     )  
     prompt = '''
 Rewrite the following Turkish customer query into a minimal product search query for our ecommerce shop.
-
 Rules:
-1. Output only essential keywords, with no complete sentences or verbs.
-2. Preserve the original Turkish language and any local slang.
-3. Convert family reference expressions into standardized product target categories:
-   - For expressions like "kızım", "my daughter": 
-     • If the context implies a child’s product, convert to "kız". 
-     • If it implies an adult product, convert to "kadın". 
-   - For expressions like "oğlum", "my son": 
-     • If the context implies a child’s product, convert to "oğlan". 
-     • If it implies an adult product, convert to "erkek".
-   - Remove possessive adjectives (e.g., "my") and reduce to the essential category term.
+1. Extract and output only the essential keywords (attributes) with no verbs or full sentences.
+2. Retain the original Turkish language, including any local slang or informal expressions.
+3. Identify and position specific holiday references if mentioned. Examples:
+   - Turkish holidays (e.g., "Ramazan", "Kurban Bayramı", "Cumhuriyet Bayramı") 
+   - Global holidays (e.g., "Noel", "Yılbaşı")
+   If a holiday is mentioned, include it as a separate token and give it appropriate emphasis.
 4. Maintain the following attribute order when present:
-   a. Color (e.g., "pembe")
-   b. Main product type (e.g., "snowboard")
-   c. Specific product form (e.g., "ayakkabıları")
-   d. Qualifiers (e.g., "kızım için") – include these only if they are critical for filtering.
-5. Do not replace terms with unrelated synonyms; keep the meaning as intended by the customer.
+   a. Color (e.g., "kırmızı")
+   b. Main product category or type (e.g., "kışlık üst giyim")
+   c. Patterns or key features (e.g., "hayvan resimli")
+   d. Holiday/special occasion (if applicable; e.g., "Noel", "Ramazan")
+   e. Qualifiers regarding target audience (e.g., convert "kızım için" to "kız" or "oğlum için" to "oğlan", using context to decide if it is a children's product or adult category).
+5. Do not replace or remove critical terms; instead, only re-order and tokenize them.
+6. Eliminate unnecessary words such as request verbs (e.g., "istiyorum").
+
 
 Query:
 
