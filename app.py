@@ -10,6 +10,7 @@ from azure.search.documents.models import QueryType
 from openai import AzureOpenAI  
 import time  
 import logging
+import urllib.parse
   
 logging.basicConfig(level=logging.DEBUG)
 
@@ -119,7 +120,10 @@ global_filter = ["brandName","genderName","colorName","mainCategoryName","rating
 global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount"]
 global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
 
-def vector_search_client_call(search_query, vector_query, items, filter_query, facets=None, sortby=None):
+debug_search_args = {}
+
+def vector_search_client_call(search_query, vector_query, items, filter_query, profile, facets=None, sortby=None):
+    global debug_search_args
     search_args = {
         "search_text": search_query,
         "vector_queries": [vector_query],
@@ -131,30 +135,67 @@ def vector_search_client_call(search_query, vector_query, items, filter_query, f
         "select": global_select,
         "filter": filter_query,
         "facets": facets or [],
+        "scoring_profile": profile
     }
-    if sortby:
-        search_args["order_by"] = f"{sortby} desc"
+    # if sortby:
+    #     search_args["order_by"] = f"{sortby} desc"
     
+    debug_search_args = search_args
+
+    # remove the vector query from the search args to avoid sending it to the search client
+    debug_search_args.pop("vector_queries", None)
+
     results = search_client.search(**search_args)
     logging.debug(f"Vector Search results: {results}")
     if results is None:  # Handle None case
         return []
     return results
 
-def keyword_search_client_call(search_query, items, filter_query, facets=None, sortby=None):
+def keyword_search_client_call(search_query, items, filter_query, profile, semantic, facets=None, sortby=None, ):
+    global debug_search_args
     search_args = {
         "search_text": search_query,
         "include_total_count": True,
-        "query_type": "semantic",
-        "semantic_configuration_name": "semantic-config",
         "top": items,
         "select": global_select,
         "filter": filter_query,
-        "facets": facets or []
+        "facets": facets or [],
+        "scoring_profile": profile
+    }
+    # if sortby:
+    #     search_args["order_by"] = f"{sortby} desc"
+    
+    if semantic:
+        search_args["query_type"] = QueryType.SEMANTIC
+        search_args["semantic_configuration_name"] = "semantic-config"
+    else:
+        search_args["query_type"] = QueryType.SIMPLE
+
+
+    debug_search_args = search_args
+
+    results = search_client.search(**search_args)
+    logging.debug(f"Key Search results: {results}")
+    if results is None:  # Handle None case
+        return []
+    return results
+
+def keyword_search_client_call_sort(search_query, items, filter_query, profile, semantic, facets=None, sortby=None, ):
+    global debug_search_args
+    search_args = {
+        "search_text": search_query,
+        "include_total_count": True,
+        "top": items,
+        "select": global_select,
+        "filter": filter_query,
+        "facets": facets or [],
+        "scoring_profile": profile
     }
     if sortby:
-        search_args["order_by"] = f"{sortby} desc"
+        search_args["order_by"] = f"{sortby} desc"   
     
+    debug_search_args = search_args
+
     results = search_client.search(**search_args)
     logging.debug(f"Key Search results: {results}")
     if results is None:  # Handle None case
@@ -165,12 +206,27 @@ def keyword_search_client_call(search_query, items, filter_query, facets=None, s
 def index():  
     starttime = time.time()  
     if request.method == 'POST':  
+        # search_query = request.form.get('search_query')  
+        # profile = request.form.get('profile')  
+        # sortby = request.form.get('sortby', '')  
+        # searchtype = request.form.get('searchtype', 'auto')  
+        # items = int(request.form.get('items', 20))  
+        # semantic = request.form.get('semantic', 'false') == 'true' 
+        # debug = request.form.get('debug', 'false') == 'true'
+
         search_query = request.form.get('search_query')  
-        profile = request.form.get('profile', 'general')  
-        sortby = request.form.get('sortby', '')  
-        searchtype = request.form.get('searchtype', 'auto')  
-        items = int(request.form.get('items', 20))  
-        return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby))  
+        profile = request.args.get('p', '')
+        searchtype = request.args.get('t', 'auto')
+        items = int(request.args.get('i', 20))
+        sortby = request.args.get('s', '')
+        filter_query = request.args.get('f', None)
+        semantic = request.args.get('semantic', 'false') == 'true'
+        debug = request.args.get('debug', 'false') == 'true'
+
+
+        return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby, semantic=semantic, debug=debug))  
+    
+        #products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info={},total_count=total_count, debug_search_args=debug_search_args, semantic=semantic, debug=True
     else:   
         search_query = request.args.get('q', '*')
         profile = request.args.get('p', '')
@@ -178,6 +234,8 @@ def index():
         items = int(request.args.get('i', 20))
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
+        semantic = request.args.get('semantic', 'false') == 'true'
+        debug = request.args.get('debug', 'false') == 'true'
   
     results = []  
     rewritten_query = ''  
@@ -185,6 +243,7 @@ def index():
     filter_query = request.args.get('f', None)
 
     filter_query = build_filter_query(filter_query)
+
 
     if searchtype == 'auto':     
         # if the query length is greater than 5 words, use rewrite and vector search with filter
@@ -198,41 +257,41 @@ def index():
 
             #if sortby not null or empty:
             if sortby != '' and sortby != None:
-                results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter, sortby)
+                results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter)
             else:
-                results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter)
+                results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter)
         # if the query length is between 3 and 5 words, use vector search with filter
-        elif len(search_query.split()) < 5 and len(search_query.split()) > 2:
+        elif len(search_query.split()) < 5 and len(search_query.split()) > 3:
             if search_query != '':
                     vector_query = VectorizableTextQuery(  
                         text=search_query,  
                         k_nearest_neighbors=50,  
                         fields=global_enbedding_fields  
                     )  
-                    results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter)
+                    results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter)
             elif search_query == '':
                     # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
-                    results = keyword_search_client_call(search_query, items, filter_query, global_filter)
+                    results = keyword_search_client_call(search_query, items, filter_query, profile, global_filter, )
         # if word is less than 3, use keyword search
         else:
             if sortby != '' and sortby != None:
-                results = keyword_search_client_call(search_query, items, filter_query, global_filter, sortby)
+                results = keyword_search_client_call_sort(search_query, items, filter_query, profile, semantic, global_filter ,sortby=sortby)
             else:
-                results = keyword_search_client_call(search_query, items, filter_query, global_filter)
+                results = keyword_search_client_call(search_query, items, filter_query, profile, semantic, global_filter)
         
     elif searchtype == 'keyword':     
         # Perform the search
-        results = keyword_search_client_call(search_query, items, filter_query, global_filter)        
+        results = keyword_search_client_call(search_query, items, filter_query, profile, semantic, global_filter)  
     elif search_query != '':
         vector_query = VectorizableTextQuery(  
             text=search_query,  
             k_nearest_neighbors=50,  
             fields=global_enbedding_fields  
         )  
-        results = vector_search_client_call(search_query, vector_query, items, filter_query, global_filter) 
+        results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter) 
     elif search_query == '':
         # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
-        results = keyword_search_client_call(search_query, items, filter_query, global_filter) 
+        results = keyword_search_client_call(search_query, items, filter_query, global_filter, profile, semantic) 
             
     products = [result for result in results]  
 
@@ -253,9 +312,10 @@ def index():
         facets = [dict(facet) for facet in facets if facet is not None]
 
     total_count = results.get_count() if results.get_count() else 0
+
     
 
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info={},total_count=total_count)  
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args, semantic=semantic, debug=debug)
     
 if __name__ == '__main__':  
     app.run(debug=True)
