@@ -160,33 +160,27 @@
 
                     <select id="srt" name="sort" class="form-control mr-2" style="font-size: small;">
                         <option value="">Best Match</option>
-                        <option value="bestPrice">Price</option>
-                        <option value="bestDiscountRate">Discount Rate</option>
-                        <option value="rating">Rating</option>
-                        <option value="totalOrderCount">Order Count</option>
+                        <option value="bestPrice desc">Price - High to Low</option>
+                        <option value="bestPrice asc">Price - Low to High</option>
+                        <option value="bestDiscountRate desc">Discount Rate - High to Low</option>
+                        <option value="bestDiscountRate asc">Discount Rate - Low to High</option>
+                        <option value="rating desc">Rating - High to Low</option>
+                        <option value="rating asc">Rating - Low to High</option>
+                        <option value="totalOrderCount desc">Order Count -High to Low</option>
+                        <option value="totalOrderCount asc">Order Count - Low to High</option>
+                        <option value="totalReviewCount desc">Review Count - High to Low</option>
+                        <option value="totalReviewCount asc">Review Count - Low to High</option>
                     </select>
 
                     <select id="res" name="results" class="form-control mr-2"  style="font-size: small;">
                         <option value=20 >20 results</option>
                         <option value=50 >50 results</option>
                         <option value=100 >100 results</option>
-                    </select>       
-                    
-                    <!-- <add a checkbox of semantic true false and the label in the same line -->
-                    <div class="form-check form-check-inline ml-2">
-                        <input class="form-check-input" type="checkbox" id="semantic" value="true" checked>
-                        <label class="form-check-label" for="semantic">Semantic</label>
-                    </div>
-
-                    <!-- same for debug and selected by difult -->
-                    <div class="form-check  form-check-inline ml-2">
-                        <input class="form-check-input" type="checkbox" id="debug" value="true" checked>
-                        <label class="form-check-label" for="debug">Debug</label>
-                    </div>  
+                    </select>                           
 
                 </form>
 
-                <p>Showing {{ products|length }} results for "{% if q2 != '' %}{{q2}}{% else %}{{q}}{% endif %}" <span style="font-style: italic;color: rgb(255, 255, 255);">Time elapsed: {{ (timeelapsed*1000)|round|int}} ms.</span>Total found {{ total_count }} Profile {{ p }}</p>
+                <p>Showing {{ products|length }} results for "{% if q2 != '' %}{{q2}}{% else %}{{q}}{% endif %}" <span style="font-style: italic;color: rgb(241, 190, 78);">Time elapsed: {{ (timeelapsed*1000)|round|int}} ms.</span>Total found {{ total_count }} Profile {{ p }}</p>
 
                 <div class="row">
                     {% for product in products %}
@@ -216,22 +210,20 @@
                 </div>
                 
                 <!-- show if debug  value is true-->
-                 
                 
-                {% if debug %}               
-                    <div class="container mt-5">
-                        <h3>Debug: Search Arguments</h3>
-                        <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
-                            {{ debug_search_args|tojson(indent=2) }}
-                        </pre>                    
+                <div class="container mt-5">
+                    <h3>Debug: Search Arguments</h3>
+                    <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
+                        {{ debug_search_args|tojson(indent=2) }}
+                    </pre>                    
 
-                    <div class="container mt-5">
-                        <h3>Debug: Products Data</h3>
-                        <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
-                            {{ products|tojson(indent=2) }}
-                        </pre>
-                    </div>
-                {% endif %}
+                <div class="container mt-5">
+                    <h3>Debug: Products Data</h3>
+                    <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
+                        {{ products|tojson(indent=2) }}
+                    </pre>
+                </div>
+            
                 
             </div>
         </div>
@@ -271,18 +263,12 @@
             console.log('Search:', urlParams.get('q'));
             console.log('Results:', urlParams.get('i'));
             console.log('Sort:', urlParams.get('s'));
-            console.log('Semantic:', urlParams.get('semantic'));
-            console.log('Debug:', urlParams.get('debug'));
-
 
             // Set initial values for other filters  
             $('#pro').val(urlParams.get('p') || 'general');
             $('#srt').val(urlParams.get('s') || '');
             $('#res').val(urlParams.get('i') || 20);
-            $('#sea').val(urlParams.get('q') || '');
-            $('#semantic').prop('checked', urlParams.get('semantic') === 'true');
-            $('#debug').prop('checked', urlParams.get('debug') === 'true');
-            
+            $('#sea').val(urlParams.get('q') || '');           
 
             $('#pro, #srt, #res, #semantic, #debug').on('change', function() {
                 makesearch();
@@ -383,17 +369,14 @@
                 var pro = $('#pro').val() || 'general';
                 var res = $('#res').val() || 20;  
                 var sea = $('#sea').val() || '';
-                var srt = $('#srt').val(); 
-                var semantic = $('#semantic').is(':checked');
-                var debug = $('#debug').is(':checked');
-                
+                var srt = $('#srt').val();                 
 
                 let filterString = Object.keys(window.selectedFilters)
                     .map(category => `${category}:${window.selectedFilters[category].join('|')}`)
                     .join(','); 
 
-                window.location.href = '/?p=' + pro + '&q=' + sea + '&i=' + res + '&s=' + srt + '&f=' + encodeURIComponent(filterString) + '&semantic=' + semantic + '&debug=' + debug;  
-            } 
+                window.location.href = '/?p=' + pro + '&q=' + sea + '&i=' + res + '&s=' + srt + '&f=' + encodeURIComponent(filterString);  
+            }
             
             // Add event listeners for filter checkboxes  
             document.querySelectorAll('.searchResults__facetControl-checkbox').forEach(checkbox => {  
