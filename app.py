@@ -89,7 +89,7 @@ def build_filter_query(filter_query):
     else:
         return None
 
-global_filter = ["brandName","genderName","colorName","mainCategoryName","rating","attributes/id"]
+global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
 global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
 global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
 
