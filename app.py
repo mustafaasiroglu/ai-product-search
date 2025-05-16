@@ -1,24 +1,29 @@
 from flask import Flask, request, render_template, redirect, url_for  
 import psycopg2  
-import os  
+import os
+import requests
+import json
+from typing import Dict
 from azure.search.documents.models import VectorFilterMode  
 from azure.search.documents import SearchClient  
 from azure.identity import DefaultAzureCredential  
 from azure.core.credentials import AzureKeyCredential  
 from azure.search.documents.models import VectorizableTextQuery  
-from azure.search.documents.models import QueryType  
+from azure.search.documents.models import QueryType 
 from openai import AzureOpenAI  
 import time  
 import logging
 import urllib.parse
+import re
   
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)  
   
-search_endpoint = os.environ.get('search_endpoint')  
+search_endpoint = os.environ.get('search_endpoint') 
 search_key = os.environ.get('search_key')  
-search_index = os.environ.get('search_index')  
+search_index = os.environ.get('search_index')
+search_api_version = "2025-03-01-preview"
   
 # Initialize SearchClient  
 search_client = SearchClient(  
@@ -38,21 +43,13 @@ def rewrite_search_query(search_query):
 Rewrite the following Turkish customer query into a minimal product search query for our ecommerce shop.
 Rules:
 1. Extract and output only the essential keywords (attributes) with no verbs or full sentences.
-2. Retain the original Turkish language, including any local slang or informal expressions.
-3. Identify and position specific holiday references if mentioned. Examples:
-   - Turkish holidays (e.g., "Ramazan", "Kurban Bayramı", "Cumhuriyet Bayramı") 
-   - Global holidays (e.g., "Noel", "Yılbaşı")
-   If a holiday is mentioned, include it as a separate token and give it appropriate emphasis.
-4. Maintain the following attribute order when present:
+2. Retain the original Turkish language except for brand names.
+3. Maintain the following attribute order when present:
    a. Color (e.g., "kırmızı")
    b. Main product category or type (e.g., "kışlık üst giyim")
    c. Patterns or key features (e.g., "hayvan resimli")
-   d. Holiday/special occasion (if applicable; e.g., "Noel", "Ramazan")
-   e. Qualifiers regarding target audience (e.g., convert "kızım için" to "kız" or "oğlum için" to "oğlan", using context to decide if it is a children's product or adult category).
-5. Do not replace or remove critical terms; instead, only re-order and tokenize them.
-6. Eliminate unnecessary words such as request verbs (e.g., "istiyorum").
-
-
+4. Eliminate unnecessary words such as request verbs (e.g., "istiyorum").
+5. Correct possible spelling / typo errors in in query. (pumma > puma, addidas > adidas, aykkabı> ayakkabı)
 Query:
 
 ''' + search_query
@@ -90,10 +87,27 @@ def build_filter_query(filter_query):
         return None
 
 global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
-global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
-global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
+global_select = ["productId", "name","brandName", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
+global_search_fields = ["name","brandName","colorName","genderName","mainCategoryName"]
+global_embedding_fields = "nameEmbedding,tagEmbedding" #descriptionEmbedding,
 
 debug_search_args = {}
+
+def rest_search_client(**bodyjson) -> Dict:
+    url = f"{search_endpoint}/indexes/{search_index}/docs/search?api-version={search_api_version}"
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": search_key
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=bodyjson)
+        response.raise_for_status()  # Raise exception for bad status codes
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # Handle request exceptions
+        detail = e.response.json().get("error", {}).get("message", str(e))
+        raise Exception(f"Search request failed: {str(e)+ ' ' + detail}") from e
 
 def vector_search_client_call(search_query, vector_query, items, filter_query, profile, facets=None, sortby=None):
     global debug_search_args
@@ -110,10 +124,10 @@ def vector_search_client_call(search_query, vector_query, items, filter_query, p
     }
     
     if sortby != '' and sortby != None:
-        search_args["query_type"] = QueryType.SIMPLE
+        search_args["query_type"] = QueryType.FULL #SIMPLE
         search_args["order_by"] = f"{sortby}"
     else:
-        search_args["query_type"] = QueryType.SEMANTIC
+        search_args["query_type"] = QueryType.SEMANTIC #SEMANTIC
         search_args["semantic_configuration_name"] = "semantic-config"
 
     
@@ -132,26 +146,29 @@ def vector_search_client_call(search_query, vector_query, items, filter_query, p
 def keyword_search_client_call(search_query, items, filter_query, profile, facets=None, sortby=None, ):
     global debug_search_args
     search_args = {
-        "search_text": search_query,
-        "include_total_count": True,
+        "search": search_query,
+        "searchFields": global_search_fields, 
+        "count": True,
         "top": items,
         "select": global_select,
         "filter": filter_query,
         "facets": facets or [],
-        "scoring_profile": profile
+        "scoringProfile": profile
     }
-    
+   
     if sortby != '' and sortby != None:
-        search_args["query_type"] = QueryType.SIMPLE
-        search_args["order_by"] = f"{sortby}"
+        search_args["queryType"] = "full" ##SIMPLE
+        search_args["orderBy"] = f"{sortby}"
     else:
-        search_args["query_type"] = QueryType.SEMANTIC
-        search_args["semantic_configuration_name"] = "semantic-config"
-
-
+        search_args["queryType"] = "semantic"
+        search_args["semanticConfiguration"] = "semantic-config"
+        search_args["queryLanguage"] = "tr-TR"
+        search_args["queryRewrites"] = "generative|count-5"
+        
     debug_search_args = search_args
 
-    results = search_client.search(**search_args)
+    # results = search_client.search(**search_args)
+    results = restsearch(**search_args)
     logging.debug(f"Key Search results: {results}")
     if results is None:  # Handle None case
         return []
@@ -178,66 +195,98 @@ def index():
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
   
-    results = []  
-    rewritten_query = ''  
-
+    rewritten_query = ''
+    debug_notes = ''
     filter_query = request.args.get('f', None)
-
     filter_query = build_filter_query(filter_query)
+    sb_0 = {
+        "top": items,
+        "count": True,
+        "select": ", ".join(global_select),
+        "searchFields": ", ".join(global_search_fields),
+        "facets": global_filter,
+        "scoringProfile": profile,
+        "skip": 0
+    }
 
-    # if the query length is greater than 5 words, use rewrite and vector search with filter
-    if len(search_query.split()) >= 5:
-        rewritten_query = rewrite_search_query(search_query)
-        vector_query = VectorizableTextQuery(  
-            text=rewritten_query,  
-            k_nearest_neighbors=50,  
-            fields=global_enbedding_fields 
-        )
+    if filter_query:
+        sb_0["filter"] = filter_query
 
-        #if sortby not null or empty:
+    # if the query length is greater than 5 words, rewrite query
+    if len(search_query.split()) >= 5 or "kombin" in search_query:
+        search_query = rewrite_search_query(search_query)
+    
+    # prepare query for fuzzy search
+    fuzzy_query = ' '.join(word + '~1' for word in re.findall(r'\b\w+\b', search_query))
+
+    # if the query is shorter than 3 words, use keyword search
+    if len(search_query.split()) < 3:
+        sb = sb_0.copy()
+        sb["queryType"] = "full"
+        sb["searchMode"] = "all"
+        sb["search"] = fuzzy_query
+        sb["orderby"] = f"{sortby}"
+        result = rest_search_client(**sb)
+
+    # if no enough result from above step or original query is 3-4 words fall back to vector search
+    if len(search_query.split()) >= 3 or len(result.get("value", [])) < 20:
+        sb = sb_0.copy()
+        sb["queryType"] = "semantic"
+        sb["searchMode"] = "any"
+        sb["search"] = search_query
+        sb["queryLanguage"] = "tr-TR"
+        sb["queryRewrites"] = "generative|count-3"
+        sb["debug"] = "queryRewrites"
+        sb["semanticConfiguration"] = "semantic-config"
+        sb["vectorQueries"] = [{
+            "kind": "text",
+            "text": search_query,
+            "k": 50,
+            "fields": global_embedding_fields,
+            "queryRewrites": "generative|count-3"
+        }]
+        sb["vectorFilterMode"] = "postFilter"
+        sb["top"] = 100
+        result = rest_search_client(**sb)
+
+    else: # if word is less than 3, use keyword fuzzy search
+        # if sort by is given, use keyword search        
+        if True or (sortby != '' and sortby != None):
+            sb = sb_0.copy()
+            sb["queryType"] = "full"
+            sb["searchMode"] = "all"
+            sb["search"] = fuzzy_query
+            sb["orderby"] = f"{sortby}"
+            result = rest_search_client(**sb)
+            # if no enough result fall back to vector search
+            if len(result.get("value", [])) < 20:
+                debug_notes += "Rewritten query: " + sb["search"] + ". "
+                result = rest_search_client(**sb)
+        # else sort by best match - semantic ranker
+        else: 
+            sb["queryType"] = "semantic"
+            sb["search"] = fuzzy_query
+            sb["queryLanguage"] = "tr-TR"
+            sb["queryRewrites"] = "generative|count-3"
+            sb["debug"] = "queryRewrites"
+            sb["semanticConfiguration"] = "semantic-config"
+            sb["top"] = 100
+            result = rest_search_client(**sb)
+    
+    
+    products = [x for x in result["value"]]
+    if sb.get("orderby",None) == None:
         if sortby != '' and sortby != None:
-            results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter, sortby)
-        else:
-            results = vector_search_client_call(rewritten_query, vector_query, items, filter_query, profile, global_filter, sortby)
-    # if the query length is between 3 and 5 words, use vector search with filter
-    elif len(search_query.split()) < 5 and len(search_query.split()) > 3:
-        if search_query != '':
-                vector_query = VectorizableTextQuery(  
-                    text=search_query,  
-                    k_nearest_neighbors=50,  
-                    fields=global_enbedding_fields  
-                )  
-                results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter, sortby)
-        elif search_query == '':
-                # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
-                results = keyword_search_client_call(search_query, items, filter_query, profile, global_filter, sortby)
-    # if word is less than 3, use keyword search
-    else:
-        results = keyword_search_client_call(search_query, items, filter_query, profile,  global_filter ,sortby)            
-        
-    products = [result for result in results]  
+            products = sorted(products, key=lambda x: x[sortby.split()[0]], reverse= "desc" in sortby)
+        products = products[:items] 
+    facets = result.get("@search.facets",[])
+    debug_search_args = sb
+    result_debug = result.get("@search.debug",{"debug_notes":debug_notes})
+    total_count = result.get("@odata.count",len(products))
 
-    # check if products is empty and if so, dont show the facets
-    if len(products) == 0:
-        facets = []
-    else:
-        # Get facets from the results
-        facets = results.get_facets() if results.get_facets() else []
+    timeelapsed = time.time() - starttime
 
-    timeelapsed = time.time() - starttime  
-
-    
-    # check products and facets to be of json format
-    if isinstance(products, list):
-        products = [dict(product) for product in products if product is not None]
-    if isinstance(facets, list):
-        facets = [dict(facet) for facet in facets if facet is not None]
-
-    total_count = results.get_count() if results.get_count() else 0
-
-    
-
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args)
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args, result_debug=result_debug)
     
 if __name__ == '__main__':  
     app.run(debug=True)
