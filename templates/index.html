@@ -326,11 +326,16 @@
                     categoryDiv.className = 'facet-group';  
                     
                     const categoryHeading = document.createElement('h3');
+                    categoryHeading.textContent = category;
+                    categoryHeading.style.display = 'none';
+                    categoryDiv.appendChild(categoryHeading);
+
+                    const categoryHeading2 = document.createElement('h3');
                     //convert camelCase to normal text
                     categoryRenamed = category.replace("Name","").replace(/([a-z])([A-Z])/g, '$1 $2');
                     categoryRenamed = categoryRenamed.charAt(0).toUpperCase() + categoryRenamed.slice(1); 
-                    categoryHeading.textContent = categoryRenamed;  
-                    categoryDiv.appendChild(categoryHeading);  
+                    categoryHeading2.textContent = categoryRenamed;  
+                    categoryDiv.appendChild(categoryHeading2);  
       
                     const categoryList = document.createElement('ul');  
                     categoryList.className = 'searchResults__facetControl-list list-group';  
