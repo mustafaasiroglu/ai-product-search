@@ -221,14 +221,25 @@ def index():
     # prepare query for fuzzy search
     fuzzy_query = ' '.join(word + '~1' for word in re.findall(r'\b\w+\b', search_query))
 
+    # replace anlynumbers with their original form remowing ~
+    fuzzy_query = re.sub(r'(\d+)\s*~\d*', r'\1', fuzzy_query)   
+
     # if the query is shorter than 3 words, use keyword search
     if len(search_query.split()) < 3 or force != None:
         sb = sb_0.copy()
         sb["queryType"] = "full"
         sb["searchMode"] = "all"
-        sb["search"] = fuzzy_query
+        sb["search"] = search_query
         sb["orderby"] = f"{sortby}"
         result = rest_search_client(**sb)
+        # if results are less than 20, use fuzzy search
+        if len(result.get("value", [])) < 20:
+            sb = sb_0.copy()
+            sb["queryType"] = "full"
+            sb["searchMode"] = "all"
+            sb["search"] = fuzzy_query
+            sb["orderby"] = f"{sortby}"
+            result = rest_search_client(**sb)
 
     # if no enough result from above step or original query is 3-4 words fall back to vector search
     if len(search_query.split()) >= 3 or len(result.get("value", [])) < 20:
@@ -237,17 +248,17 @@ def index():
         sb["searchMode"] = "any"
         sb["search"] = search_query
         sb["queryLanguage"] = "tr-TR"
-        sb["queryRewrites"] = "generative|count-3"
         # sb["captions"] = "extractive"
-        # sb["answers"] = "extractive"      
-        sb["debug"] = "queryRewrites"
+        # sb["answers"] = "extractive"     
+        # sb["queryRewrites"] = "generative|count-3" 
+        # sb["debug"] = "queryRewrites"
         sb["semanticConfiguration"] = "semantic-config"
         sb["vectorQueries"] = [{
             "kind": "text",
             "text": search_query,
             "k": 50,
             "fields": global_embedding_fields,
-            "queryRewrites": "generative|count-3"
+            # "queryRewrites": "generative|count-3"
         }]
         sb["vectorFilterMode"] = "postFilter"
         sb["top"] = 100

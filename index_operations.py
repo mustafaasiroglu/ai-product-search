@@ -72,5 +72,24 @@ def update_boyner_synonymmap() -> None:
     put_synonymmap(synonymmap_name, synonyms)
     ##print(get_synonymmap("boyner"))
 
+def get_index_schema() -> None:
+    url = f"{search_endpoint}/indexes/{search_index}?api-version={search_api_version}"
+    headers = {
+        "api-key": search_key
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Index schema request failed: {str(e.response)}") from e
+
+
+
 if __name__ == '__main__':  
-    print(get_synonymmap("boyner"))
+
+    #print(get_synonymmap("boyner"))
+    
+    
+
+    pretty_print = json.dumps(get_index_schema(), indent=4)
+    print(pretty_print)
