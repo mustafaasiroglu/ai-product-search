@@ -82,14 +82,35 @@ def get_index_schema() -> None:
         return response.json()
     except requests.exceptions.RequestException as e:
         raise Exception(f"Index schema request failed: {str(e.response)}") from e
-
-
+    
+def update_index_schema(schemajson) -> None:
+    url = f"{search_endpoint}/indexes/{search_index}?api-version={search_api_version}"
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": search_key
+    }
+    body = schemajson
+    try:
+        response = requests.put(url, headers=headers, json=body)
+        response.raise_for_status()  # Raise exception for bad status codes
+    except requests.exceptions.RequestException as e:
+        # Handle request exceptions
+        detail = e.response.json().get("error", {}).get("message", str(e))
+        raise Exception(f"Index schema request failed: {str(e)+ ' ' + detail}") from e
+    return response
 
 if __name__ == '__main__':  
 
-    #print(get_synonymmap("boyner"))
-    
-    
+    x = get_index_schema()
+    x["suggesters"] = [
+        {
+        "name": "sg",
+        "searchMode": "analyzingInfixMatching",
+        "sourceFields": ["brandName","mainCategoryName"]
+        }
+    ]
+    update_index_schema(x)
 
     pretty_print = json.dumps(get_index_schema(), indent=4)
+    
     print(pretty_print)

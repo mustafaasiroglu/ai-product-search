@@ -496,6 +496,8 @@
                 suggestionsDiv.innerHTML = '';
                 console.log("suggestions",suggestions);
                 if (suggestions.length > 0) {
+                    //top 10 suggestions
+                    suggestions = suggestions.slice(0, 5);
                     suggestions.forEach(suggestion => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';

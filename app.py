@@ -314,9 +314,9 @@ def get_suggestions():
     # Create search parameters for suggestions
     suggest_params = {
         "search": fuzzy_query,
-        "top": 5,
-        "select": ", ".join(global_select),
-        "searchFields": "brandName, mainCategoryName",
+        "top": 100,
+        "select": "brandName",
+        "searchFields": "brandName",
         "queryType": "full",
         "searchMode": "all"
     }
@@ -329,9 +329,6 @@ def get_suggestions():
             if 'brandName' in item:
                 if item['brandName'] not in suggestions:
                     suggestions.append(item['brandName'])
-            elif 'mainCategoryName' in item:
-                if item['mainCategoryName'] not in suggestions:
-                    suggestions.append(item['mainCategoryName'])
             # elif 'name' in item:
             #     if item['name'] not in suggestions:
             #         suggestions.append(item['name'])
