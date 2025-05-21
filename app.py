@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for  
+from flask import Flask, request, render_template, redirect, url_for, jsonify  
 import psycopg2  
 import os
 import requests
@@ -302,6 +302,32 @@ def index():
     timeelapsed = time.time() - starttime
 
     return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args, result_debug=result_debug)
+    
+@app.route('/suggestions')
+def get_suggestions():
+    query = request.args.get('q', '')
+    if len(query) < 2:
+        return jsonify([])
+    
+    fuzzy_query = ' '.join(word + '~2' for word in re.findall(r'\b\w+\b', query))
+
+    # Create search parameters for suggestions
+    suggest_params = {
+        "search": fuzzy_query,
+        "top": 5,
+        "select": ", ".join(global_select),
+        "searchFields": ", ".join(global_search_fields),
+        "queryType": "full",
+        "searchMode": "all"
+    }
+
+    try:
+        results = rest_search_client(**suggest_params)
+        suggestions = [item['name'] for item in results.get('value', [])]
+        return jsonify(suggestions)
+    except Exception as e:
+        logging.error(f"Error getting suggestions: {str(e)}")
+        return jsonify([])
     
 if __name__ == '__main__':  
     app.run(debug=True)

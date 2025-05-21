@@ -130,6 +130,34 @@
             padding: 0.5rem;
             font-size: 14px;
         }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -142,10 +170,18 @@
 
 
             <div class="search-bar">
-
-                <form id="inputform" method="POST" style="width: 100%;">
-                    <input type="text" id="sea" name="search_query" class="form-control" placeholder="Let's find the products you searched for..." style="padding:20px;padding-left: 45px;">
-                </form>
+                <div class="search-container">
+                    <form id="inputform" method="POST" style="width: 100%;">
+                        <input type="text" 
+                               id="sea" 
+                               name="search_query" 
+                               class="form-control" 
+                               placeholder="Let's find the products you searched for..." 
+                               style="padding:20px;padding-left: 45px;"
+                               autocomplete="off">
+                    </form>
+                    <div id="searchSuggestions" class="search-suggestions"></div>
+                </div>
                 <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="25" height="40" viewBox="0 0 50 50" style="position: absolute;margin: 0px 10px;">
                     <path fill="gray" d="M 21 3 C 11.601563 3 4 10.601563 4 20 C 4 29.398438 11.601563 37 21 37 C 24.355469 37 27.460938 36.015625 30.09375 34.34375 L 42.375 46.625 L 46.625 42.375 L 34.5 30.28125 C 36.679688 27.421875 38 23.878906 38 20 C 38 10.601563 30.398438 3 21 3 Z M 21 7 C 28.199219 7 34 12.800781 34 20 C 34 27.199219 28.199219 33 21 33 C 13.800781 33 8 27.199219 8 20 C 8 12.800781 13.800781 7 21 7 Z"></path>
                 </svg>
@@ -427,6 +463,55 @@
             
             createGroupedFacetList(facetData);  
         </script>  
+    <script>
+    let typingTimer;
+    const doneTypingInterval = 200; // ms
+    const searchInput = document.getElementById('sea');
+    const suggestionsDiv = document.getElementById('searchSuggestions');
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+        if (searchInput.value) {
+            typingTimer = setTimeout(getSuggestions, doneTypingInterval);
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+
+    function getSuggestions() {
+        const query = searchInput.value;
+        if (query.length < 2) return;
+
+        fetch(`/suggestions?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(suggestions => {
+                suggestionsDiv.innerHTML = '';
+                console.log("suggestions",suggestions);
+                if (suggestions.length > 0) {
+                    suggestions.forEach(suggestion => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.textContent = suggestion;
+                        div.onclick = function() {
+                            searchInput.value = suggestion;
+                            suggestionsDiv.style.display = 'none';
+                            document.getElementById('inputform').submit();
+                        };
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = 'block';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+    }
+</script>
 </body>
 
 </html>
