@@ -321,6 +321,15 @@ def get_suggestions():
         "searchMode": "all"
     }
 
+    suggest_params2 = {
+        "search": fuzzy_query,
+        "top": 100,
+        "select": "mainCategoryName",
+        "searchFields": "mainCategoryName",
+        "queryType": "full",
+        "searchMode": "all"
+    }
+
     suggestions = []
 
     try:
@@ -329,6 +338,12 @@ def get_suggestions():
             if 'brandName' in item:
                 if item['brandName'] not in suggestions:
                     suggestions.append(item['brandName'])
+        
+        results2 = rest_search_client(**suggest_params2)
+        for item in results2.get('value', []):
+            if 'mainCategoryName' in item:
+                if item['mainCategoryName'] not in suggestions:
+                    suggestions.append(item['mainCategoryName'])
             # elif 'name' in item:
             #     if item['name'] not in suggestions:
             #         suggestions.append(item['name'])
