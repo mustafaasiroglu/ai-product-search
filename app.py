@@ -30,7 +30,7 @@ search_client = SearchClient(
     endpoint=search_endpoint,  
     index_name=search_index,  
     credential=AzureKeyCredential(search_key)  
-)  
+)
   
 def rewrite_search_query(search_query):  
     client = AzureOpenAI(  
@@ -184,6 +184,7 @@ def index():
         items = int(request.args.get('i', 20))
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
+        force = request.form.get('force', None)
 
         return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby))  
     
@@ -194,6 +195,7 @@ def index():
         items = int(request.args.get('i', 20))
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
+        force = request.form.get('force', None)
   
     rewritten_query = ''
     debug_notes = ''
@@ -220,7 +222,7 @@ def index():
     fuzzy_query = ' '.join(word + '~1' for word in re.findall(r'\b\w+\b', search_query))
 
     # if the query is shorter than 3 words, use keyword search
-    if len(search_query.split()) < 3:
+    if len(search_query.split()) < 3 or force != None:
         sb = sb_0.copy()
         sb["queryType"] = "full"
         sb["searchMode"] = "all"
@@ -236,6 +238,8 @@ def index():
         sb["search"] = search_query
         sb["queryLanguage"] = "tr-TR"
         sb["queryRewrites"] = "generative|count-3"
+        # sb["captions"] = "extractive"
+        # sb["answers"] = "extractive"      
         sb["debug"] = "queryRewrites"
         sb["semanticConfiguration"] = "semantic-config"
         sb["vectorQueries"] = [{
@@ -249,29 +253,29 @@ def index():
         sb["top"] = 100
         result = rest_search_client(**sb)
 
-    else: # if word is less than 3, use keyword fuzzy search
-        # if sort by is given, use keyword search        
-        if True or (sortby != '' and sortby != None):
-            sb = sb_0.copy()
-            sb["queryType"] = "full"
-            sb["searchMode"] = "all"
-            sb["search"] = fuzzy_query
-            sb["orderby"] = f"{sortby}"
-            result = rest_search_client(**sb)
-            # if no enough result fall back to vector search
-            if len(result.get("value", [])) < 20:
-                debug_notes += "Rewritten query: " + sb["search"] + ". "
-                result = rest_search_client(**sb)
-        # else sort by best match - semantic ranker
-        else: 
-            sb["queryType"] = "semantic"
-            sb["search"] = fuzzy_query
-            sb["queryLanguage"] = "tr-TR"
-            sb["queryRewrites"] = "generative|count-3"
-            sb["debug"] = "queryRewrites"
-            sb["semanticConfiguration"] = "semantic-config"
-            sb["top"] = 100
-            result = rest_search_client(**sb)
+    # else: # if word is less than 3, use keyword fuzzy search
+    #     # if sort by is given, use keyword search        
+    #     if True or (sortby != '' and sortby != None):
+    #         sb = sb_0.copy()
+    #         sb["queryType"] = "full"
+    #         sb["searchMode"] = "all"
+    #         sb["search"] = fuzzy_query
+    #         sb["orderby"] = f"{sortby}"
+    #         result = rest_search_client(**sb)
+    #         # if no enough result fall back to vector search
+    #         if len(result.get("value", [])) < 20:
+    #             debug_notes += "Rewritten query: " + sb["search"] + ". "
+    #             result = rest_search_client(**sb)
+    #     # else sort by best match - semantic ranker
+    #     else: 
+    #         sb["queryType"] = "semantic"
+    #         sb["search"] = fuzzy_query
+    #         sb["queryLanguage"] = "tr-TR"
+    #         sb["queryRewrites"] = "generative|count-3"
+    #         sb["debug"] = "queryRewrites"
+    #         sb["semanticConfiguration"] = "semantic-config"
+    #         sb["top"] = 100
+    #         result = rest_search_client(**sb)
     
     
     products = [x for x in result["value"]]

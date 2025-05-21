@@ -325,8 +325,11 @@
                     const categoryDiv = document.createElement('div');  
                     categoryDiv.className = 'facet-group';  
                     
-                    const categoryHeading = document.createElement('h3');  
-                    categoryHeading.textContent = category;  
+                    const categoryHeading = document.createElement('h3');
+                    //convert camelCase to normal text
+                    categoryRenamed = category.replace("Name","").replace(/([a-z])([A-Z])/g, '$1 $2');
+                    categoryRenamed = categoryRenamed.charAt(0).toUpperCase() + categoryRenamed.slice(1); 
+                    categoryHeading.textContent = categoryRenamed;  
                     categoryDiv.appendChild(categoryHeading);  
       
                     const categoryList = document.createElement('ul');  
