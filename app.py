@@ -150,7 +150,7 @@ def index():
         sb_0["filter"] = filter_query
 
     # if the query length is greater than 5 words, rewrite query
-    if len(search_query.split()) >= 5 in search_query:
+    if len(search_query.split()) >= 5:
         search_query = rewrite_search_query(search_query)
     
     # prepare query for fuzzy search
@@ -180,7 +180,7 @@ def index():
     if len(search_query.split()) >= 3 or len(result.get("value", [])) < 10:
         sb = sb_0.copy()
         # sb["queryType"] = ""
-        sb["searchMode"] = "any" #all
+        sb["searchMode"] = "all" #all
         sb["search"] = search_query
         sb["queryLanguage"] = "tr-TR"
         # sb["captions"] = "extractive"
