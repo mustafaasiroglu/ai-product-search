@@ -1,31 +1,36 @@
-from flask import Flask, request, render_template, redirect, url_for  
+from flask import Flask, request, render_template, redirect, url_for, jsonify  
 import psycopg2  
-import os  
+import os
+import requests
+import json
+from typing import Dict
 from azure.search.documents.models import VectorFilterMode  
 from azure.search.documents import SearchClient  
 from azure.identity import DefaultAzureCredential  
 from azure.core.credentials import AzureKeyCredential  
 from azure.search.documents.models import VectorizableTextQuery  
-from azure.search.documents.models import QueryType  
+from azure.search.documents.models import QueryType 
 from openai import AzureOpenAI  
 import time  
 import logging
 import urllib.parse
+import re
   
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)  
   
-search_endpoint = os.environ.get('search_endpoint')  
+search_endpoint = os.environ.get('search_endpoint') 
 search_key = os.environ.get('search_key')  
-search_index = os.environ.get('search_index')  
+search_index = os.environ.get('search_index')
+search_api_version = "2025-03-01-preview"
   
 # Initialize SearchClient  
 search_client = SearchClient(  
     endpoint=search_endpoint,  
     index_name=search_index,  
     credential=AzureKeyCredential(search_key)  
-)  
+)
   
 def rewrite_search_query(search_query):  
     client = AzureOpenAI(  
@@ -38,21 +43,13 @@ def rewrite_search_query(search_query):
 Rewrite the following Turkish customer query into a minimal product search query for our ecommerce shop.
 Rules:
 1. Extract and output only the essential keywords (attributes) with no verbs or full sentences.
-2. Retain the original Turkish language, including any local slang or informal expressions.
-3. Identify and position specific holiday references if mentioned. Examples:
-   - Turkish holidays (e.g., "Ramazan", "Kurban Bayramı", "Cumhuriyet Bayramı") 
-   - Global holidays (e.g., "Noel", "Yılbaşı")
-   If a holiday is mentioned, include it as a separate token and give it appropriate emphasis.
-4. Maintain the following attribute order when present:
+2. Retain the original Turkish language except for brand names.
+3. Maintain the following attribute order when present:
    a. Color (e.g., "kırmızı")
    b. Main product category or type (e.g., "kışlık üst giyim")
    c. Patterns or key features (e.g., "hayvan resimli")
-   d. Holiday/special occasion (if applicable; e.g., "Noel", "Ramazan")
-   e. Qualifiers regarding target audience (e.g., convert "kızım için" to "kız" or "oğlum için" to "oğlan", using context to decide if it is a children's product or adult category).
-5. Do not replace or remove critical terms; instead, only re-order and tokenize them.
-6. Eliminate unnecessary words such as request verbs (e.g., "istiyorum").
-
-
+4. Eliminate unnecessary words such as request verbs (e.g., "istiyorum").
+5. Correct possible spelling / typo errors in in query. (pumma > puma, addidas > adidas, aykkabı> ayakkabı)
 Query:
 
 ''' + search_query
@@ -90,72 +87,27 @@ def build_filter_query(filter_query):
         return None
 
 global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
-global_select = ["productId", "name", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
-global_enbedding_fields = "descriptionEmbedding,nameEmbedding,tagEmbedding"
+global_select = ["productId", "name","brandName", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
+global_search_fields = ["name","brandName","colorName","genderName","mainCategoryName"]
+global_embedding_fields = "nameEmbedding, descriptionEmbedding"
 
 debug_search_args = {}
 
-def vector_search_client_call(search_query, vector_query, items, filter_query, profile, facets=None, sortby=None):
-    global debug_search_args
-    search_args = {
-        "search_text": search_query,
-        "vector_queries": [vector_query],
-        "include_total_count": True,
-        "top": items,
-        "vector_filter_mode": VectorFilterMode.POST_FILTER,
-        "select": global_select,
-        "filter": filter_query,
-        "facets": facets or [],
-        "scoring_profile": profile
+def rest_search_client(**bodyjson) -> Dict:
+    url = f"{search_endpoint}/indexes/{search_index}/docs/search?api-version={search_api_version}"
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": search_key
     }
-    
-    if sortby != '' and sortby != None:
-        search_args["query_type"] = QueryType.SIMPLE
-        search_args["order_by"] = f"{sortby}"
-    else:
-        search_args["query_type"] = QueryType.SEMANTIC
-        search_args["semantic_configuration_name"] = "semantic-config"
 
-    
-    debug_search_args = search_args
-
-    # remove the vector query from the search args to avoid sending it to the search client
-    debug_search_args.pop("vector_queries", None)
-
-
-    results = search_client.search(**search_args)
-    logging.debug(f"Vector Search results: {results}")
-    if results is None:  # Handle None case
-        return []
-    return results
-
-def keyword_search_client_call(search_query, items, filter_query, profile, facets=None, sortby=None, ):
-    global debug_search_args
-    search_args = {
-        "search_text": search_query,
-        "include_total_count": True,
-        "top": items,
-        "select": global_select,
-        "filter": filter_query,
-        "facets": facets or [],
-        "scoring_profile": profile
-    }
-    
-    if sortby != '' and sortby != None:
-        search_args["query_type"] = QueryType.SIMPLE
-        search_args["order_by"] = f"{sortby}"
-    else:
-        search_args["query_type"] = QueryType.SEMANTIC
-        search_args["semantic_configuration_name"] = "semantic-config"
-
-
-    debug_search_args = search_args
-
-    results = search_client.search(**search_args)
-    logging.debug(f"Key Search results: {results}")
-    if results is None:  # Handle None case
-        return []
-    return results
+    try:
+        response = requests.post(url, headers=headers, json=bodyjson)
+        response.raise_for_status()  # Raise exception for bad status codes
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # Handle request exceptions
+        detail = e.response.json().get("error", {}).get("message", str(e))
+        raise Exception(f"Search request failed: {str(e)+ ' ' + detail}") from e
     
 @app.route('/', methods=['GET', 'POST'])  
 def index():  
@@ -167,6 +119,7 @@ def index():
         items = int(request.args.get('i', 20))
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
+        force = request.form.get('force', None)
 
         return redirect(url_for('index', q=search_query, p=profile, t=searchtype, i=items, s=sortby))  
     
@@ -177,67 +130,177 @@ def index():
         items = int(request.args.get('i', 20))
         sortby = request.args.get('s', '')
         filter_query = request.args.get('f', None)
+        force = request.form.get('force', None)
   
-    results = []  
-    rewritten_query = ''  
-
+    rewritten_query = ''
+    debug_notes = ''
     filter_query = request.args.get('f', None)
-
     filter_query = build_filter_query(filter_query)
+    sb_0 = {
+        "top": items,
+        "count": True,
+        "select": ", ".join(global_select),
+        "searchFields": ", ".join(global_search_fields),
+        "facets": global_filter,
+        "scoringProfile": profile,
+        "skip": 0
+    }
 
-    # if the query length is greater than 5 words, use rewrite and vector search with filter
+    if filter_query:
+        sb_0["filter"] = filter_query
+
+    # if the query length is greater than 5 words, rewrite query
     if len(search_query.split()) >= 5:
-        rewritten_query = rewrite_search_query(search_query)
-        vector_query = VectorizableTextQuery(  
-            text=rewritten_query,  
-            k_nearest_neighbors=50,  
-            fields=global_enbedding_fields 
-        )
+        search_query = rewrite_search_query(search_query)
+    
+    # prepare query for fuzzy search
+    fuzzy_query = ' '.join(word + '~1' for word in re.findall(r'\b\w+\b', search_query))
 
-        #if sortby not null or empty:
+    # replace anlynumbers with their original form remowing ~
+    fuzzy_query = re.sub(r'(\d+)\s*~\d*', r'\1', fuzzy_query)   
+
+    # if the query is shorter than 3 words, use keyword search
+    if len(search_query.split()) < 3 or force != None:
+        sb = sb_0.copy()
+        sb["queryType"] = "full"
+        sb["searchMode"] = "all"
+        sb["search"] = search_query
+        sb["orderby"] = f"{sortby}"
+        result = rest_search_client(**sb)
+        # if results are less than 20, use fuzzy search
+        if len(result.get("value", [])) < 10:
+            sb = sb_0.copy()
+            sb["queryType"] = "full"
+            sb["searchMode"] = "all"
+            sb["search"] = fuzzy_query
+            sb["orderby"] = f"{sortby}"
+            result = rest_search_client(**sb)
+
+    # if no enough result from above step or original query is 3-4 words fall back to vector search
+    if len(search_query.split()) >= 3 or len(result.get("value", [])) < 10:
+        sb = sb_0.copy()
+        # sb["queryType"] = ""
+        sb["searchMode"] = "all" #all
+        sb["search"] = search_query
+        sb["queryLanguage"] = "tr-TR"
+        # sb["captions"] = "extractive"
+        # sb["answers"] = "extractive"     
+        # sb["semanticConfiguration"] = "semantic-config"
+        sb["vectorQueries"] = [
+            {
+                "kind": "text",
+                "text": search_query,
+                "k": 50,
+                "weight": 0.5,
+                "fields": "nameEmbedding"
+            },
+            {
+                "kind": "text",
+                "text": search_query,
+                "k": 50,
+                "weight": 0.2,
+                "fields": "descriptionEmbedding"
+            },
+            # {
+            #     "kind": "text",
+            #     "text": search_query,
+            #     "k": 50,
+            #     "weight": 2.0,
+            #     "fields": "tagEmbedding",
+            # }
+            ]
+        sb["vectorFilterMode"] = "postFilter"
+        sb["top"] = 1000
+        result = rest_search_client(**sb)
+
+    # else: # if word is less than 3, use keyword fuzzy search
+    #     # if sort by is given, use keyword search        
+    #     if True or (sortby != '' and sortby != None):
+    #         sb = sb_0.copy()
+    #         sb["queryType"] = "full"
+    #         sb["searchMode"] = "all"
+    #         sb["search"] = fuzzy_query
+    #         sb["orderby"] = f"{sortby}"
+    #         result = rest_search_client(**sb)
+    #         # if no enough result fall back to vector search
+    #         if len(result.get("value", [])) < 20:
+    #             debug_notes += "Rewritten query: " + sb["search"] + ". "
+    #             result = rest_search_client(**sb)
+    #     # else sort by best match - semantic ranker
+    #     else: 
+    #         sb["queryType"] = "semantic"
+    #         sb["search"] = fuzzy_query
+    #         sb["queryLanguage"] = "tr-TR"
+    #         sb["queryRewrites"] = "generative|count-3"
+    #         sb["debug"] = "queryRewrites"
+    #         sb["semanticConfiguration"] = "semantic-config"
+    #         sb["top"] = 100
+    #         result = rest_search_client(**sb)
+    
+    
+    products = [x for x in result["value"]]
+    if sb.get("orderby",None) == None:
         if sortby != '' and sortby != None:
-            results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter, sortby)
-        else:
-            results = vector_search_client_call(rewritten_query, vector_query, items, filter_query, profile, global_filter, sortby)
-    # if the query length is between 3 and 5 words, use vector search with filter
-    elif len(search_query.split()) < 5 and len(search_query.split()) > 3:
-        if search_query != '':
-                vector_query = VectorizableTextQuery(  
-                    text=search_query,  
-                    k_nearest_neighbors=50,  
-                    fields=global_enbedding_fields  
-                )  
-                results = vector_search_client_call(search_query, vector_query, items, filter_query, profile, global_filter, sortby)
-        elif search_query == '':
-                # if the search query is empty, perform a keyword search instead as you cannot perform a vector search without a query
-                results = keyword_search_client_call(search_query, items, filter_query, profile, global_filter, sortby)
-    # if word is less than 3, use keyword search
-    else:
-        results = keyword_search_client_call(search_query, items, filter_query, profile,  global_filter ,sortby)            
+            products = sorted(products, key=lambda x: x[sortby.split()[0]], reverse= "desc" in sortby)
+        products = products[:items] 
+    facets = result.get("@search.facets",[])
+    debug_search_args = sb
+    result_debug = result.get("@search.debug",{"debug_notes":debug_notes})
+    total_count = result.get("@odata.count",len(products))
+
+    timeelapsed = time.time() - starttime
+
+    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args, result_debug=result_debug)
+    
+@app.route('/suggestions')
+def get_suggestions():
+    query = request.args.get('q', '')
+    if len(query) < 2:
+        return jsonify([])
+    
+    fuzzy_query = ' '.join(word + '~2' for word in re.findall(r'\b\w+\b', query))
+
+    # Create search parameters for suggestions
+    suggest_params = {
+        "search": fuzzy_query,
+        "top": 100,
+        "select": "brandName",
+        "searchFields": "brandName",
+        "queryType": "full",
+        "searchMode": "all"
+    }
+
+    suggest_params2 = {
+        "search": fuzzy_query,
+        "top": 100,
+        "select": "mainCategoryName",
+        "searchFields": "mainCategoryName",
+        "queryType": "full",
+        "searchMode": "all"
+    }
+
+    suggestions = []
+
+    try:
+        results = rest_search_client(**suggest_params)
+        for item in results.get('value', []):
+            if 'brandName' in item:
+                if item['brandName'] not in suggestions:
+                    suggestions.append(item['brandName'])
         
-    products = [result for result in results]  
-
-    # check if products is empty and if so, dont show the facets
-    if len(products) == 0:
-        facets = []
-    else:
-        # Get facets from the results
-        facets = results.get_facets() if results.get_facets() else []
-
-    timeelapsed = time.time() - starttime  
-
-    
-    # check products and facets to be of json format
-    if isinstance(products, list):
-        products = [dict(product) for product in products if product is not None]
-    if isinstance(facets, list):
-        facets = [dict(facet) for facet in facets if facet is not None]
-
-    total_count = results.get_count() if results.get_count() else 0
-
-    
-
-    return render_template('index.html', products=products, q=search_query, q2=rewritten_query, p=profile, t=searchtype, i=items, s=sortby, timeelapsed=timeelapsed, facets=facets,debug_info=debug_search_args,total_count=total_count, debug_search_args=debug_search_args)
+        results2 = rest_search_client(**suggest_params2)
+        for item in results2.get('value', []):
+            if 'mainCategoryName' in item:
+                if item['mainCategoryName'] not in suggestions:
+                    suggestions.append(item['mainCategoryName'])
+            # elif 'name' in item:
+            #     if item['name'] not in suggestions:
+            #         suggestions.append(item['name'])
+            
+        return jsonify(suggestions)
+    except Exception as e:
+        logging.error(f"Error getting suggestions: {str(e)}")
+        return jsonify([])
     
 if __name__ == '__main__':  
     app.run(debug=True)
