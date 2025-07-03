@@ -102,14 +102,14 @@ def update_index_schema(schemajson) -> None:
 if __name__ == '__main__':  
 
     x = get_index_schema()
-    x["suggesters"] = [
-        {
-        "name": "sg",
-        "searchMode": "analyzingInfixMatching",
-        "sourceFields": ["brandName","mainCategoryName"]
-        }
-    ]
-    update_index_schema(x)
+    # x["suggesters"] = [
+    #     {
+    #     "name": "sg",
+    #     "searchMode": "analyzingInfixMatching",
+    #     "sourceFields": ["brandName","mainCategoryName"]
+    #     }
+    # ]
+    # update_index_schema(x)
 
     pretty_print = json.dumps(get_index_schema(), indent=4)
     

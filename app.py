@@ -89,7 +89,7 @@ def build_filter_query(filter_query):
 global_filter = ["brandName","genderName","colorName","mainCategoryName","rating"]
 global_select = ["productId", "name","brandName", "description", "imageUrl","rating","bestPrice","bestDiscountRate","totalReviewCount","totalOrderCount","categories","favoriCount","filterAttributes","attributes"]
 global_search_fields = ["name","brandName","colorName","genderName","mainCategoryName"]
-global_embedding_fields = "nameEmbedding,tagEmbedding" #descriptionEmbedding,
+global_embedding_fields = "nameEmbedding, descriptionEmbedding"
 
 debug_search_args = {}
 
@@ -150,7 +150,7 @@ def index():
         sb_0["filter"] = filter_query
 
     # if the query length is greater than 5 words, rewrite query
-    if len(search_query.split()) >= 5 or "kombin" in search_query:
+    if len(search_query.split()) >= 5 in search_query:
         search_query = rewrite_search_query(search_query)
     
     # prepare query for fuzzy search
@@ -168,7 +168,7 @@ def index():
         sb["orderby"] = f"{sortby}"
         result = rest_search_client(**sb)
         # if results are less than 20, use fuzzy search
-        if len(result.get("value", [])) < 20:
+        if len(result.get("value", [])) < 10:
             sb = sb_0.copy()
             sb["queryType"] = "full"
             sb["searchMode"] = "all"
@@ -177,26 +177,40 @@ def index():
             result = rest_search_client(**sb)
 
     # if no enough result from above step or original query is 3-4 words fall back to vector search
-    if len(search_query.split()) >= 3 or len(result.get("value", [])) < 20:
+    if len(search_query.split()) >= 3 or len(result.get("value", [])) < 10:
         sb = sb_0.copy()
-        sb["queryType"] = "semantic"
-        sb["searchMode"] = "any"
+        # sb["queryType"] = ""
+        sb["searchMode"] = "any" #all
         sb["search"] = search_query
         sb["queryLanguage"] = "tr-TR"
         # sb["captions"] = "extractive"
         # sb["answers"] = "extractive"     
-        # sb["queryRewrites"] = "generative|count-3" 
-        # sb["debug"] = "queryRewrites"
-        sb["semanticConfiguration"] = "semantic-config"
-        sb["vectorQueries"] = [{
-            "kind": "text",
-            "text": search_query,
-            "k": 50,
-            "fields": global_embedding_fields,
-            # "queryRewrites": "generative|count-3"
-        }]
+        # sb["semanticConfiguration"] = "semantic-config"
+        sb["vectorQueries"] = [
+            {
+                "kind": "text",
+                "text": search_query,
+                "k": 50,
+                "weight": 0.5,
+                "fields": "nameEmbedding"
+            },
+            {
+                "kind": "text",
+                "text": search_query,
+                "k": 50,
+                "weight": 0.2,
+                "fields": "descriptionEmbedding"
+            },
+            # {
+            #     "kind": "text",
+            #     "text": search_query,
+            #     "k": 50,
+            #     "weight": 2.0,
+            #     "fields": "tagEmbedding",
+            # }
+            ]
         sb["vectorFilterMode"] = "postFilter"
-        sb["top"] = 100
+        sb["top"] = 1000
         result = rest_search_client(**sb)
 
     # else: # if word is less than 3, use keyword fuzzy search
